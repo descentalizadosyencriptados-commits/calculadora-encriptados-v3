@@ -1,400 +1,4 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UniV3 — Rebalance Simulator</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Unbounded:wght@400;600;700;900&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#060810;--bg1:#0B0F1C;--bg2:#0F1622;--bg3:#141E30;
-  --line:#1A2540;--line2:#243060;
-  --gold:#F2C14E;--gold2:#A87010;--goldbg:rgba(242,193,78,.08);
-  --cyan:#00CFFF;--cyan2:#0080AA;--cyanbg:rgba(0,207,255,.08);
-  --green:#00F080;--green2:#00904A;--greenbg:rgba(0,240,128,.08);
-  --red:#FF3D5A;--red2:#991020;--redbg:rgba(255,61,90,.08);
-  --amber:#FFB020;--amber2:#886010;--amberbg:rgba(255,176,32,.08);
-  --purple:#A060FF;--purplebg:rgba(160,96,255,.08);
-  --txt:#D0E4F8;--txt2:#4A6890;--txt3:#243050;
-  --mono:'JetBrains Mono',monospace;
-  --head:'Unbounded',sans-serif;
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--txt);font-family:var(--mono);min-height:100vh;
-  background-image:
-    radial-gradient(ellipse 110% 35% at 50% -5%,rgba(0,207,255,.06) 0%,transparent 55%),
-    radial-gradient(ellipse 50% 40% at 98% 70%,rgba(242,193,78,.04) 0%,transparent 55%),
-    radial-gradient(ellipse 40% 30% at 0% 50%,rgba(160,96,255,.03) 0%,transparent 50%);}
 
-/* ── TOP ── */
-.top{display:flex;align-items:center;justify-content:space-between;
-  padding:12px 24px;border-bottom:1px solid var(--line);
-  background:rgba(6,8,16,.96);backdrop-filter:blur(24px);
-  position:sticky;top:0;z-index:400;}
-.brand{display:flex;align-items:center;gap:10px;}
-.bmark{width:30px;height:30px;border-radius:7px;
-  background:linear-gradient(135deg,var(--gold),var(--cyan));
-  display:flex;align-items:center;justify-content:center;font-size:14px;}
-.bname{font-family:var(--head);font-size:13px;font-weight:700;}
-.bname em{color:var(--cyan);font-style:normal;}
-.btag{font-size:7px;color:var(--txt2);letter-spacing:2px;margin-top:1px;}
-.pills{display:flex;gap:8px;align-items:center;}
-.pill{display:inline-flex;align-items:center;gap:4px;
-  font-size:8px;letter-spacing:1px;padding:3px 8px;
-  border-radius:20px;border:1px solid;}
-.pill-c{color:var(--cyan);border-color:var(--cyan2);background:var(--cyanbg);}
-.pill-g{color:var(--green);border-color:var(--green2);background:var(--greenbg);}
-.pill-r{color:var(--red);border-color:var(--red2);background:var(--redbg);}
-.pill-a{color:var(--amber);border-color:var(--amber2);background:var(--amberbg);}
-.dot{width:4px;height:4px;border-radius:50%;background:currentColor;}
-
-/* ── LAYOUT ── */
-.wrap{max-width:1380px;margin:0 auto;padding:20px 16px;}
-
-.sec{font-size:8px;letter-spacing:2.5px;text-transform:uppercase;color:var(--txt2);
-  margin-bottom:10px;display:flex;align-items:center;gap:8px;}
-.sec::after{content:'';flex:1;height:1px;background:var(--line);}
-
-/* ── CARD ── */
-.card{background:var(--bg1);border:1px solid var(--line);border-radius:13px;overflow:hidden;margin-bottom:16px;}
-.ch{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
-.ci{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
-.ci-g{background:var(--goldbg);border:1px solid var(--gold2);}
-.ci-c{background:var(--cyanbg);border:1px solid var(--cyan2);}
-.ci-gr{background:var(--greenbg);border:1px solid var(--green2);}
-.ci-a{background:var(--amberbg);border:1px solid var(--amber2);}
-.ci-r{background:var(--redbg);border:1px solid var(--red2);}
-.ct{font-family:var(--head);font-size:11px;font-weight:700;}
-.cs{font-size:8px;color:var(--txt2);margin-top:1px;}
-.cb{padding:14px 16px;}
-
-/* ── INPUTS ── */
-.igrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));}
-.ifield{padding:12px 14px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);}
-.ifield:last-child{border-right:none;}
-.ilbl{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--txt2);margin-bottom:5px;}
-.ihint{color:var(--txt3);font-size:6px;margin-left:3px;}
-input[type=number],input[type=text],select{
-  width:100%;background:var(--bg);border:1px solid var(--line2);
-  border-radius:6px;color:var(--txt);font-family:var(--mono);font-size:13px;
-  padding:7px 10px;outline:none;transition:border-color .15s,box-shadow .15s;
-  -moz-appearance:textfield;}
-input[type=number]::-webkit-outer-spin-button,
-input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
-input:focus,select:focus{border-color:var(--cyan2);box-shadow:0 0 0 3px var(--cyanbg);}
-select{cursor:pointer;}
-.iactions{padding:11px 14px;border-top:1px solid var(--line);
-  display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
-
-/* ── BUTTONS ── */
-.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;
-  border-radius:7px;border:none;cursor:pointer;font-family:var(--mono);
-  font-size:10px;font-weight:600;transition:all .15s;letter-spacing:.3px;}
-.btn-gold{background:linear-gradient(135deg,var(--gold),#B07010);color:#060810;
-  box-shadow:0 3px 14px rgba(242,193,78,.18);}
-.btn-gold:hover{box-shadow:0 5px 20px rgba(242,193,78,.32);transform:translateY(-1px);}
-.btn-ghost{background:transparent;color:var(--txt2);border:1px solid var(--line2);}
-.btn-ghost:hover{background:var(--bg2);color:var(--txt);}
-.btn-green{background:var(--greenbg);color:var(--green);border:1px solid var(--green2);}
-.btn-green:hover{background:rgba(0,240,128,.14);}
-
-/* ── SITUATION ── */
-.sitbar{background:var(--bg1);border:1px solid var(--line);border-radius:12px;
-  padding:13px 16px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
-.sitbar input{width:140px;font-size:14px;}
-
-/* ── DUAL ── */
-.dual{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:16px;}
-@media(max-width:820px){.dual{grid-template-columns:1fr;}}
-.panel{background:var(--bg1);border:1px solid var(--line);border-radius:13px;overflow:hidden;}
-.ph{padding:11px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;}
-.pb{padding:14px 15px;}
-
-/* ── RANGE VIZ ── */
-.rviz{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:11px;}
-.rtrack{position:relative;height:7px;background:var(--bg);border-radius:4px;margin:9px 0 20px;}
-.rfill{position:absolute;top:0;height:100%;border-radius:4px;}
-.rpin{position:absolute;top:-8px;width:23px;height:23px;border-radius:50%;
-  border:3px solid var(--bg);transform:translateX(-50%);box-shadow:0 0 12px currentColor;}
-.rtick{position:absolute;bottom:-17px;font-size:7px;color:var(--txt2);
-  white-space:nowrap;transform:translateX(-50%);}
-.rlabels{display:flex;justify-content:space-between;font-size:9px;margin-top:2px;}
-
-/* ── ANSWER BOX ── */
-.answer{border-radius:9px;padding:13px;margin-bottom:11px;border:2px solid;}
-.answer-ttl{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:7px;font-weight:700;}
-.answer-big{font-family:var(--head);font-size:24px;font-weight:900;line-height:1;margin-bottom:5px;}
-.answer-sub{font-size:9px;color:var(--txt2);line-height:1.6;}
-.ans-amber{background:var(--amberbg);border-color:var(--amber2);}
-.ans-green{background:var(--greenbg);border-color:var(--green2);}
-.ans-cyan{background:var(--cyanbg);border-color:var(--cyan2);}
-.ans-red{background:var(--redbg);border-color:var(--red2);}
-
-/* ── STAT GRID ── */
-.sg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:11px;}
-.st{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;}
-.slb{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--txt2);margin-bottom:3px;}
-.svl{font-size:16px;font-weight:700;line-height:1;}
-.ssb{font-size:8px;color:var(--txt2);margin-top:2px;}
-
-/* ── INJECT BOX ── */
-.ibox{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:12px;margin-bottom:11px;}
-.ib-ttl{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:9px;}
-.irow{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
-.itok{flex:1;min-width:75px;background:var(--bg);border:1px solid var(--line);
-  border-radius:6px;padding:8px 10px;text-align:center;}
-.itok-sym{font-size:7px;color:var(--txt2);margin-bottom:2px;letter-spacing:1px;text-transform:uppercase;}
-.itok-val{font-size:14px;font-weight:700;}
-.itok-usd{font-size:7px;color:var(--txt2);margin-top:1px;}
-.iop{color:var(--txt3);font-size:16px;flex-shrink:0;}
-
-/* ── SUMMARY ── */
-.sumrow{display:flex;justify-content:space-between;padding:7px 0;
-  border-bottom:1px solid rgba(26,37,64,.4);font-size:10px;}
-.sumrow:last-child{border-bottom:none;}
-.sumk{color:var(--txt2);}
-.sumv{font-weight:600;text-align:right;}
-
-/* ── COMPARE TABLE ── */
-.ctable{width:100%;border-collapse:collapse;}
-.ctable th{padding:8px 13px;background:var(--bg2);font-size:7px;letter-spacing:1.5px;
-  text-transform:uppercase;color:var(--txt2);border-bottom:1px solid var(--line);text-align:left;}
-.ctable th:not(:first-child){text-align:right;}
-.ctable td{padding:9px 13px;border-bottom:1px solid rgba(26,37,64,.35);font-size:10px;vertical-align:middle;}
-.ctable tr:last-child td{border-bottom:none;}
-.ctable tr:hover td{background:rgba(0,207,255,.02);}
-.ctable .ck{color:var(--txt2);font-size:9px;}
-.ctable .cv{font-weight:600;text-align:right;}
-.ctable .cd{text-align:right;font-size:9px;}
-
-.predict-card{background:linear-gradient(180deg,rgba(6,8,16,.95),rgba(9,14,26,.98));border:1px solid rgba(0,207,255,.18);border-radius:14px;overflow:hidden;margin-bottom:16px;}
-.predict-header{padding:14px 16px;border-bottom:1px solid rgba(26,37,64,.5);display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.predict-title{font-family:var(--head);font-size:11px;font-weight:700;color:var(--cyan);}
-.predict-sub{font-size:8px;color:var(--txt2);line-height:1.5;max-width:56ch;}
-.predict-table{width:100%;border-collapse:collapse;}
-.predict-table th,.predict-table td{padding:12px 14px;border-bottom:1px solid rgba(26,37,64,.4);font-size:10px;text-align:left;}
-.predict-table th{background:rgba(0,207,255,.06);color:var(--txt2);text-transform:uppercase;letter-spacing:1.3px;font-size:8px;}
-.predict-table td{background:rgba(255,255,255,.02);}
-.predict-table tr:nth-child(odd) td{background:rgba(0,207,255,.02);}
-.predict-table td strong{display:block;font-weight:700;color:var(--txt);}
-.predict-table td .sub{font-size:8px;color:var(--txt2);margin-top:3px;}
-.predict-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:8px;background:rgba(0,207,255,.12);color:var(--cyan);border:1px solid rgba(0,207,255,.18);}
-
-/* ── VERDICT ── */
-.verdict{background:linear-gradient(135deg,rgba(0,240,128,.05),rgba(0,207,255,.05));
-  border:1px solid var(--line2);border-radius:12px;padding:16px 18px;
-  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;}
-.vm{font-family:var(--head);font-size:12px;font-weight:700;line-height:1.4;}
-.vs{font-size:9px;color:var(--txt2);margin-top:4px;}
-.vn-lbl{font-size:7px;color:var(--txt2);margin-bottom:2px;letter-spacing:1px;text-transform:uppercase;}
-.vn-val{font-family:var(--head);font-size:22px;font-weight:900;}
-
-/* ── COLORS ── */
-.gold{color:var(--gold);}
-.cyan{color:var(--cyan);}
-.green{color:var(--green);}
-.red{color:var(--red);}
-.amber{color:var(--amber);}
-.txt2{color:var(--txt2);}
-
-.gline{height:1px;background:linear-gradient(90deg,transparent,var(--cyan2),var(--gold2),transparent);opacity:.2;margin:10px 0;}
-
-.empty{text-align:center;padding:24px;color:var(--txt3);font-size:9px;}
-.empty span{display:block;font-size:20px;margin-bottom:7px;}
-
-::-webkit-scrollbar{width:4px;}
-::-webkit-scrollbar-track{background:var(--bg);}
-::-webkit-scrollbar-thumb{background:var(--line2);border-radius:2px;}
-
-/* ── HISTORY ── */
-.history{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
-.hist-item{background:var(--bg2);border:1px solid var(--line);border-radius:8px;
-  padding:8px 12px;font-size:9px;cursor:pointer;transition:all .15s;min-width:120px;}
-.hist-item:hover{border-color:var(--cyan2);background:var(--cyanbg);}
-.hist-n{color:var(--txt2);font-size:7px;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;}
-.hist-v{font-weight:700;color:var(--gold);}
-.hist-s{font-size:8px;color:var(--txt2);margin-top:2px;}
-
-/* ── INJECT SLIDER ── */
-.slider-wrap{margin:10px 0;}
-.slider-labels{display:flex;justify-content:space-between;font-size:8px;color:var(--txt2);margin-top:3px;}
-input[type=range]{width:100%;-webkit-appearance:none;appearance:none;
-  height:4px;border-radius:2px;outline:none;cursor:pointer;
-  background:linear-gradient(to right,var(--green) 0%,var(--green) var(--pct,50%),var(--line2) var(--pct,50%),var(--line2) 100%);}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;
-  border-radius:50%;background:var(--green);border:2px solid var(--bg);box-shadow:0 0 8px var(--green);}
-</style>
-</head>
-<body>
-
-<div class="top">
-  <div class="brand">
-    <div class="bmark">⬡</div>
-    <div>
-      <div class="bname">UniV3 <em>Rebalance</em></div>
-      <div class="btag">SIMULADOR UNIVERSAL DE RANGOS</div>
-    </div>
-  </div>
-  <div class="pills">
-    <span class="pill pill-c"><span class="dot"></span>CUALQUIER PAR</span>
-    <span id="hdrPill" class="pill pill-r"><span class="dot"></span>—</span>
-  </div>
-</div>
-
-<div class="wrap">
-
-<!-- ① POSICIÓN -->
-<div class="sec">① Posición original</div>
-<div class="card">
-  <div class="ch">
-    <div class="ci ci-g">⚙</div>
-    <div>
-      <div class="ct">Configuración del par</div>
-      <div class="cs">Funciona para cualquier par: ETH/USDC, BTC/ETH, MATIC/USDC, etc.</div>
-    </div>
-    <div style="margin-left:auto;display:flex;gap:18px;flex-wrap:wrap;">
-      <div style="text-align:right;">
-        <div style="font-size:7px;color:var(--txt2);letter-spacing:1px;text-transform:uppercase;">Capital inicial (USD)</div>
-        <div id="dInitVal" style="font-family:var(--head);font-size:15px;color:var(--gold);">$—</div>
-      </div>
-      <div style="text-align:right;">
-        <div style="font-size:7px;color:var(--txt2);letter-spacing:1px;text-transform:uppercase;">Amplitud</div>
-        <div id="dWidth" style="font-family:var(--head);font-size:15px;color:var(--cyan);">—</div>
-      </div>
-    </div>
-  </div>
-  <div class="igrid">
-    <div class="ifield" style="grid-column:span 2;">
-      <div class="ilbl">Par de tokens <span class="ihint">token base / token cotización</span></div>
-      <div style="display:flex;gap:8px;">
-        <input type="text" id="iTokA" value="ETH" placeholder="Token A (ej: ETH, BTC)" style="flex:1;text-transform:uppercase;">
-        <div style="align-self:center;color:var(--txt3);font-size:14px;">/</div>
-        <input type="text" id="iTokB" value="USDC" placeholder="Token B (ej: USDC, DAI)" style="flex:1;text-transform:uppercase;">
-      </div>
-    </div>
-    <div class="ifield">
-      <div class="ilbl" id="lbl-amtA">Cantidad de ETH</div>
-      <input type="number" id="iAmtA" value="2" step="0.001" min="0" oninput="onInput()">
-    </div>
-    <div class="ifield">
-      <div class="ilbl" id="lbl-amtB">Cantidad de USDC</div>
-      <input type="number" id="iAmtB" value="5000" step="10" min="0" oninput="onInput()">
-    </div>
-    <div class="ifield">
-      <div class="ilbl" id="lbl-p0">Precio entrada P₀ <span class="ihint" id="hint-p0">USDC/ETH</span></div>
-      <input type="number" id="iP0" value="2500" step="1" min="0.000001" oninput="onInput()">
-    </div>
-    <div class="ifield">
-      <div class="ilbl">P_LOW original</div>
-      <input type="number" id="iPLo" value="2000" step="1" min="0.000001" oninput="onInput()">
-    </div>
-    <div class="ifield">
-      <div class="ilbl">P_HIGH original</div>
-      <input type="number" id="iPHi" value="3000" step="1" min="0.000001" oninput="onInput()">
-    </div>
-    <div class="ifield">
-      <div class="ilbl">APR fees <span class="ihint">% anual</span></div>
-      <input type="number" id="iApr" value="25" step="0.5" min="0" oninput="onInput()">
-    </div>
-    <div class="ifield">
-      <div class="ilbl">Días en posición</div>
-      <input type="number" id="iDays" value="30" step="1" min="1" oninput="onInput()">
-    </div>
-  </div>
-  <div class="iactions">
-    <button class="btn btn-gold" onclick="run()">▶ Simular escenarios</button>
-    <button class="btn btn-ghost" onclick="reset()">↺ Reset</button>
-    <div id="initSummary" style="margin-left:auto;font-size:9px;color:var(--txt2);"></div>
-  </div>
-</div>
-
-<!-- ② PRECIO ACTUAL -->
-<div class="sec">② ¿A dónde fue el precio?</div>
-<div class="sitbar">
-  <div>
-    <div style="font-size:7px;color:var(--txt2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;">
-      PRECIO ACTUAL <span id="pairLabel" style="color:var(--cyan);">USDC/ETH</span>
-    </div>
-    <input type="number" id="iPNow" value="1500" step="1" min="0.000001" oninput="run()">
-  </div>
-  <div style="color:var(--txt3);font-size:18px;flex-shrink:0;">→</div>
-  <div style="flex:1;min-width:180px;">
-    <div id="sitNarr" style="font-size:11px;line-height:1.7;color:var(--txt);">—</div>
-  </div>
-  <div id="sitPill" style="margin-left:auto;flex-shrink:0;"></div>
-</div>
-
-<!-- REBALANCE HISTORY -->
-<div class="sec">Historial de rebalanceos</div>
-<div id="histSection">
-  <div style="background:var(--bg1);border:1px dashed var(--line2);border-radius:10px;
-    padding:12px 16px;font-size:9px;color:var(--txt3);text-align:center;margin-bottom:16px;">
-    Los rebalanceos que simules aparecerán aquí. Podés encadenar múltiples rebalanceos.
-  </div>
-</div>
-
-<!-- ③ ESTRATEGIAS -->
-<div class="sec">③ Estrategias de reposicionamiento</div>
-
-<!-- INJECTION CONTROL -->
-<div class="card" style="margin-bottom:13px;">
-  <div class="ch">
-    <div class="ci ci-gr">⊕</div>
-    <div class="ct" style="color:var(--green);">Control de reinyección (Estrategia B)</div>
-    <div class="cs">Cuánto token A adicional comprás al precio actual para reinyectar</div>
-  </div>
-  <div class="cb">
-    <div style="font-size:8px;color:var(--txt2);margin-bottom:6px;">
-      % del token A actual que comprás extra al precio caído:
-    </div>
-    <div class="slider-wrap">
-      <input type="range" id="injectPct" min="10" max="200" value="50" step="5"
-        oninput="updateSlider(this);run()">
-      <div class="slider-labels">
-        <span>10%</span>
-        <span id="injectPctLbl" style="color:var(--green);font-weight:700;">50% extra</span>
-        <span>200%</span>
-      </div>
-    </div>
-    <div id="injectPreview" style="font-size:9px;color:var(--txt2);margin-top:6px;"></div>
-  </div>
-</div>
-
-<div class="dual">
-  <div class="panel">
-    <div class="ph">
-      <div class="ci ci-a">A</div>
-      <div>
-        <div class="ct" style="color:var(--amber);">Sin reinyección</div>
-        <div class="cs">Solo con lo que tenés · La herramienta calcula P_HIGH</div>
-      </div>
-    </div>
-    <div class="pb" id="panelA"><div class="empty"><span>📐</span>Presioná Simular</div></div>
-  </div>
-  <div class="panel">
-    <div class="ph">
-      <div class="ci ci-gr">B</div>
-      <div>
-        <div class="ct" style="color:var(--green);">Con reinyección</div>
-        <div class="cs">Comprás más token A · Rango más estrecho · Recuperás todo</div>
-      </div>
-    </div>
-    <div class="pb" id="panelB"><div class="empty"><span>💉</span>Presioná Simular</div></div>
-  </div>
-</div>
-
-<!-- ④ COMPARATIVA -->
-<div class="sec">④ Comparativa final</div>
-<div id="predictSection"></div>
-<div id="compareSection">
-  <div class="empty" style="border:1px solid var(--line);border-radius:12px;padding:24px;">
-    <span>⚖</span>Simulá para ver la comparativa
-  </div>
-</div>
-
-</div><!-- /wrap -->
-
-<script>
 // ══ MATH ══
 const sq = x => Math.sqrt(Math.max(0, x));
 
@@ -474,26 +78,34 @@ const g   = id => document.getElementById(id);
 let S = {};
 let history = []; // array of rebalance snapshots
 
-function tokA()  { return (g('iTokA').value.trim().toUpperCase()) || 'TKNA'; }
-function tokB()  { return (g('iTokB').value.trim().toUpperCase()) || 'TKNB'; }
-function pLabel(){ return tokB()+'/'+tokA(); }
+function tokA()  { return 'ETH'; }
+function tokB()  { return 'USDC'; }
+
+function calcLfromCapital(capitalB, p, plo, phi) {
+  if (capitalB <= 0 || p <= plo || p >= phi || plo <= 0 || phi <= plo) return 0;
+  const sp = sq(p), sl = sq(plo), sh = sq(phi);
+  const denom = 2*sp - sl - sp*sp/sh;
+  return denom > 0 ? capitalB / denom : 0;
+}
 
 function onInput() {
-  // update labels
-  g('lbl-amtA').textContent   = 'Cantidad de ' + tokA();
-  g('lbl-amtB').textContent   = 'Cantidad de ' + tokB();
-  g('hint-p0').textContent    = tokB() + '/' + tokA();
-  g('pairLabel').textContent  = pLabel();
-  g('lbl-p0').childNodes[0].nodeValue = 'Precio entrada P₀ ';
+  const capital = +g('iCapital').value || 0;
+  const p0 = +g('iP0').value || 1;
+  const plo = +g('iPLo').value || 1;
+  const phi = +g('iPHi').value || 1;
+  const initB = capital;
+  g('dInitVal').textContent = f$(initB, 2, '$');
+  const halfW = p0 > 0 ? (phi - plo) / (2 * p0) * 100 : 0;
+  g('dWidth').textContent = halfW > 0 ? '±' + halfW.toFixed(1) + '%' : '—';
 
-  const amtA=+g('iAmtA').value||0, amtB=+g('iAmtB').value||0;
-  const p0=+g('iP0').value||1, plo=+g('iPLo').value||1, phi=+g('iPHi').value||1;
-  const initB = amtA*p0 + amtB; // total in token B
-  g('dInitVal').textContent = f$(initB, 2, tokB()==='USDC'||tokB()==='DAI'||tokB()==='USDT'?'$':'');
-  const halfW = p0>0 ? (phi-plo)/(2*p0)*100 : 0;
-  g('dWidth').textContent = halfW>0 ? '±'+halfW.toFixed(1)+'%' : '—';
-  g('initSummary').textContent =
-    `L₀ = ${calcL(amtA,amtB,p0,plo,phi).toFixed(3)} · Rango: ${f$(plo,2,'')}–${f$(phi,2,'')} ${tokB()}`;
+  const L0 = calcLfromCapital(initB, p0, plo, phi);
+  if (L0 > 0) {
+    const startAmounts = amountsAt(L0, p0, plo, phi);
+    g('initSummary').textContent =
+      `≈ ${fT(startAmounts.a, tokA())} + ${f$(startAmounts.b, 2, '')} ${tokB()} @ ${fmtP(p0)}`;
+  } else {
+    g('initSummary').textContent = 'Ingresá Capital y rango válidos; el precio de entrada debe quedar dentro de P_LOW y P_HIGH.';
+  }
 }
 
 function updateSlider(el) {
@@ -505,23 +117,28 @@ function updateSlider(el) {
 }
 
 function run() {
-  const amtA0=+g('iAmtA').value, amtB0=+g('iAmtB').value;
-  const p0=+g('iP0').value, plo0=+g('iPLo').value, phi0=+g('iPHi').value;
-  const apr=+g('iApr').value/100, days=+g('iDays').value;
-  const pNow=+g('iPNow').value;
-  const injectPct=+g('injectPct').value/100;
-  if (!p0||!plo0||!phi0||plo0>=phi0||pNow<=0||amtA0<=0) return;
+  const capital = +g('iCapital').value;
+  const p0 = +g('iP0').value;
+  const plo0 = +g('iPLo').value;
+  const phi0 = +g('iPHi').value;
+  const pNow = +g('iPNow').value;
+  const injectPct = +g('injectPct').value/100;
+  if (!capital || !p0 || !plo0 || !phi0 || plo0 >= phi0 || pNow <= 0 || p0 <= plo0 || p0 >= phi0) return;
   onInput();
 
-  const initB    = amtA0*p0 + amtB0;     // initial capital in token B
-  const fees_B   = initB * apr * (days/365); // fees in token B
-  const L0       = calcL(amtA0, amtB0, p0, plo0, phi0);
+  const initB = capital;
+  const L0 = calcLfromCapital(initB, p0, plo0, phi0);
+  if (!L0) return;
+
+  const initial = amountsAt(L0, p0, plo0, phi0);
+  const amtA0 = initial.a;
+  const amtB0 = initial.b;
 
   // What we have after price moved
-  const cur      = amountsAt(L0, pNow, plo0, phi0);
-  const curA     = cur.a;
+  const cur = amountsAt(L0, pNow, plo0, phi0);
+  const curA = cur.a;
   const curB_raw = cur.b;
-  const curB     = curB_raw + fees_B;
+  const curB = curB_raw;
   const curVal_B = curA*pNow + curB;
 
   const exitedLow  = pNow <= plo0;
@@ -532,8 +149,7 @@ function run() {
   // Convert everything to token A at current price
   // (since if exited low → 100% A already; fees in B → convert to A)
   const A_totalA = curA + curB / pNow;  // all capital as token A
-  // P_LOW_A = pNow * 1.005 (just above current so price enters on the way up/down)
-  const A_plo    = exitedHigh ? pNow * 0.995 : pNow * 1.005;
+  const A_plo = exitedHigh ? pNow * 0.995 : pNow * 1.005;
   // Recovery target = initB (original capital in token B)
   const A_phi    = solvePhiFullA(A_totalA, A_plo, initB);
   if (!A_phi || A_phi <= A_plo) {
@@ -549,8 +165,7 @@ function run() {
   // Buy injectPct more token A at current price
   const B_extraA    = curA * injectPct;
   const B_cost_B    = B_extraA * pNow;        // cost in token B
-  const B_totalA    = curA + B_extraA;        // + existing B-fees converted
-  // We also still have curB (fees), convert to A for full position
+  const B_totalA    = curA + B_extraA;
   const B_totalA_all = B_totalA + curB / pNow;
   const B_plo       = A_plo; // same P_LOW
   // Recovery target B = initB + B_cost_B  (recover EVERYTHING: initial + injected)
@@ -571,13 +186,15 @@ function run() {
     `Comprás <strong class="green">${fT(B_extraA, tokA())}</strong> = <strong>${f$(B_cost_B,2,'')} ${tokB()}</strong> al precio ${f$(pNow,2,'')} ${tokB()}/${tokA()} · Total ${tokA()} en posición: <strong class="cyan">${fT(B_totalA_all, tokA())}</strong>`;
 
   S = {
-    amtA0,amtB0,p0,plo0,phi0,apr,days,pNow,injectPct,
-    initB,fees_B,L0,curA,curB,curVal_B,
-    exitedLow,exitedHigh,inRange,
-    A_plo,A_phi,A_L,A_totalA,A_exitB,A_width,A_pnl,
-    B_extraA,B_cost_B,B_totalA_all,B_plo,B_phi,B_L,
-    B_exitB,B_width,B_pnl,B_pnl_net,B_targetB,
-    tA:tokA(), tB:tokB(),
+    capital: initB,
+    p0, plo0, phi0, pNow, injectPct,
+    amtA0, amtB0,
+    initB, L0, curA, curB, curVal_B,
+    exitedLow, exitedHigh, inRange,
+    A_plo, A_phi, A_L, A_totalA, A_exitB, A_width, A_pnl,
+    B_extraA, B_cost_B, B_totalA_all, B_plo, B_phi, B_L,
+    B_exitB, B_width, B_pnl, B_pnl_net, B_targetB,
+    tA: tokA(), tB: tokB(),
   };
 
   renderAll();
@@ -925,6 +542,7 @@ function addToHistory(which) {
   const snap = {
     n: history.length+1,
     which,
+    capital: S.initB,
     pNow: S.pNow,
     plo:  which==='A' ? S.A_plo : S.B_plo,
     phi:  which==='A' ? S.A_phi : S.B_phi,
@@ -969,24 +587,21 @@ function renderHistory() {
 
 function loadSnapshot(i) {
   const h = history[i];
-  // Load the snapshot's resulting range as the new "current position"
-  g('iP0').value   = h.pNow;
-  g('iPLo').value  = h.plo.toFixed(4);
-  g('iPHi').value  = h.phi.toFixed(4);
-  g('iAmtA').value = h.totalA.toFixed(6);
-  g('iAmtB').value = '0';
-  g('iTokA').value = h.tA;
-  g('iTokB').value = h.tB;
+  g('iCapital').value = h.capital;
+  g('iP0').value = h.pNow;
+  g('iPLo').value = h.plo.toFixed(4);
+  g('iPHi').value = h.phi.toFixed(4);
+  g('iPNow').value = h.pNow;
   onInput();
+  run();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function clearHistory() { history=[]; renderHistory(); }
 
 function reset() {
-  [['iAmtA',2],['iAmtB',5000],['iP0',2500],['iPLo',2000],['iPHi',3000],
-   ['iApr',25],['iDays',30],['iPNow',1500],['injectPct',50],
-   ['iTokA','ETH'],['iTokB','USDC']].forEach(([id,v])=>g(id).value=v);
+  [['iCapital',5000],['iP0',2500],['iPLo',2000],['iPHi',3000],
+   ['iPNow',1500],['injectPct',50]].forEach(([id,v])=>g(id).value=v);
   history=[];
   updateSlider(g('injectPct'));
   onInput(); run();
@@ -996,6 +611,4 @@ function reset() {
 updateSlider(g('injectPct'));
 onInput();
 run();
-</script>
-</body>
-</html>
+

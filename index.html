@@ -265,23 +265,18 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   </div>
   <div class="igrid">
     <div class="ifield" style="grid-column:span 2;">
-      <div class="ilbl">Par de tokens <span class="ihint">token base / token cotización</span></div>
-      <div style="display:flex;gap:8px;">
-        <input type="text" id="iTokA" value="ETH" placeholder="Token A (ej: ETH, BTC)" style="flex:1;text-transform:uppercase;">
-        <div style="align-self:center;color:var(--txt3);font-size:14px;">/</div>
-        <input type="text" id="iTokB" value="USDC" placeholder="Token B (ej: USDC, DAI)" style="flex:1;text-transform:uppercase;">
+      <div class="ilbl">Par de tokens</div>
+      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
+        <div style="font-weight:700;letter-spacing:.08em;color:var(--txt);">ETH / USDC</div>
+        <div style="font-size:11px;color:var(--txt2);">Distribución calculada automáticamente</div>
       </div>
     </div>
     <div class="ifield">
-      <div class="ilbl" id="lbl-amtA">Cantidad de ETH</div>
-      <input type="number" id="iAmtA" value="2" step="0.001" min="0" oninput="onInput()">
+      <div class="ilbl">Capital inicial (USD)</div>
+      <input type="number" id="iCapital" value="5000" step="10" min="0" oninput="onInput()">
     </div>
     <div class="ifield">
-      <div class="ilbl" id="lbl-amtB">Cantidad de USDC</div>
-      <input type="number" id="iAmtB" value="5000" step="10" min="0" oninput="onInput()">
-    </div>
-    <div class="ifield">
-      <div class="ilbl" id="lbl-p0">Precio entrada P₀ <span class="ihint" id="hint-p0">USDC/ETH</span></div>
+      <div class="ilbl">Precio entrada P₀</div>
       <input type="number" id="iP0" value="2500" step="1" min="0.000001" oninput="onInput()">
     </div>
     <div class="ifield">
@@ -291,14 +286,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <div class="ifield">
       <div class="ilbl">P_HIGH original</div>
       <input type="number" id="iPHi" value="3000" step="1" min="0.000001" oninput="onInput()">
-    </div>
-    <div class="ifield">
-      <div class="ilbl">APR fees <span class="ihint">% anual</span></div>
-      <input type="number" id="iApr" value="25" step="0.5" min="0" oninput="onInput()">
-    </div>
-    <div class="ifield">
-      <div class="ilbl">Días en posición</div>
-      <input type="number" id="iDays" value="30" step="1" min="1" oninput="onInput()">
     </div>
   </div>
   <div class="iactions">
@@ -313,7 +300,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 <div class="sitbar">
   <div>
     <div style="font-size:7px;color:var(--txt2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;">
-      PRECIO ACTUAL <span id="pairLabel" style="color:var(--cyan);">USDC/ETH</span>
+      PRECIO ACTUAL <span id="pairLabel" style="color:var(--cyan);">ETH/USDC</span>
     </div>
     <input type="number" id="iPNow" value="1500" step="1" min="0.000001" oninput="run()">
   </div>
@@ -474,26 +461,34 @@ const g   = id => document.getElementById(id);
 let S = {};
 let history = []; // array of rebalance snapshots
 
-function tokA()  { return (g('iTokA').value.trim().toUpperCase()) || 'TKNA'; }
-function tokB()  { return (g('iTokB').value.trim().toUpperCase()) || 'TKNB'; }
-function pLabel(){ return tokB()+'/'+tokA(); }
+function tokA()  { return 'ETH'; }
+function tokB()  { return 'USDC'; }
+
+function calcLfromCapital(capitalB, p, plo, phi) {
+  if (capitalB <= 0 || p <= plo || p >= phi || plo <= 0 || phi <= plo) return 0;
+  const sp = sq(p), sl = sq(plo), sh = sq(phi);
+  const denom = 2*sp - sl - sp*sp/sh;
+  return denom > 0 ? capitalB / denom : 0;
+}
 
 function onInput() {
-  // update labels
-  g('lbl-amtA').textContent   = 'Cantidad de ' + tokA();
-  g('lbl-amtB').textContent   = 'Cantidad de ' + tokB();
-  g('hint-p0').textContent    = tokB() + '/' + tokA();
-  g('pairLabel').textContent  = pLabel();
-  g('lbl-p0').childNodes[0].nodeValue = 'Precio entrada P₀ ';
+  const capital = +g('iCapital').value || 0;
+  const p0 = +g('iP0').value || 1;
+  const plo = +g('iPLo').value || 1;
+  const phi = +g('iPHi').value || 1;
+  const initB = capital;
+  g('dInitVal').textContent = f$(initB, 2, '$');
+  const halfW = p0 > 0 ? (phi - plo) / (2 * p0) * 100 : 0;
+  g('dWidth').textContent = halfW > 0 ? '±' + halfW.toFixed(1) + '%' : '—';
 
-  const amtA=+g('iAmtA').value||0, amtB=+g('iAmtB').value||0;
-  const p0=+g('iP0').value||1, plo=+g('iPLo').value||1, phi=+g('iPHi').value||1;
-  const initB = amtA*p0 + amtB; // total in token B
-  g('dInitVal').textContent = f$(initB, 2, tokB()==='USDC'||tokB()==='DAI'||tokB()==='USDT'?'$':'');
-  const halfW = p0>0 ? (phi-plo)/(2*p0)*100 : 0;
-  g('dWidth').textContent = halfW>0 ? '±'+halfW.toFixed(1)+'%' : '—';
-  g('initSummary').textContent =
-    `L₀ = ${calcL(amtA,amtB,p0,plo,phi).toFixed(3)} · Rango: ${f$(plo,2,'')}–${f$(phi,2,'')} ${tokB()}`;
+  const L0 = calcLfromCapital(initB, p0, plo, phi);
+  if (L0 > 0) {
+    const startAmounts = amountsAt(L0, p0, plo, phi);
+    g('initSummary').textContent =
+      `≈ ${fT(startAmounts.a, tokA())} + ${f$(startAmounts.b, 2, '')} ${tokB()} @ ${fmtP(p0)}`;
+  } else {
+    g('initSummary').textContent = 'Ingresá Capital y rango válidos; el precio de entrada debe quedar dentro de P_LOW y P_HIGH.';
+  }
 }
 
 function updateSlider(el) {
@@ -505,23 +500,28 @@ function updateSlider(el) {
 }
 
 function run() {
-  const amtA0=+g('iAmtA').value, amtB0=+g('iAmtB').value;
-  const p0=+g('iP0').value, plo0=+g('iPLo').value, phi0=+g('iPHi').value;
-  const apr=+g('iApr').value/100, days=+g('iDays').value;
-  const pNow=+g('iPNow').value;
-  const injectPct=+g('injectPct').value/100;
-  if (!p0||!plo0||!phi0||plo0>=phi0||pNow<=0||amtA0<=0) return;
+  const capital = +g('iCapital').value;
+  const p0 = +g('iP0').value;
+  const plo0 = +g('iPLo').value;
+  const phi0 = +g('iPHi').value;
+  const pNow = +g('iPNow').value;
+  const injectPct = +g('injectPct').value/100;
+  if (!capital || !p0 || !plo0 || !phi0 || plo0 >= phi0 || pNow <= 0 || p0 <= plo0 || p0 >= phi0) return;
   onInput();
 
-  const initB    = amtA0*p0 + amtB0;     // initial capital in token B
-  const fees_B   = initB * apr * (days/365); // fees in token B
-  const L0       = calcL(amtA0, amtB0, p0, plo0, phi0);
+  const initB = capital;
+  const L0 = calcLfromCapital(initB, p0, plo0, phi0);
+  if (!L0) return;
+
+  const initial = amountsAt(L0, p0, plo0, phi0);
+  const amtA0 = initial.a;
+  const amtB0 = initial.b;
 
   // What we have after price moved
-  const cur      = amountsAt(L0, pNow, plo0, phi0);
-  const curA     = cur.a;
+  const cur = amountsAt(L0, pNow, plo0, phi0);
+  const curA = cur.a;
   const curB_raw = cur.b;
-  const curB     = curB_raw + fees_B;
+  const curB = curB_raw;
   const curVal_B = curA*pNow + curB;
 
   const exitedLow  = pNow <= plo0;
@@ -532,8 +532,7 @@ function run() {
   // Convert everything to token A at current price
   // (since if exited low → 100% A already; fees in B → convert to A)
   const A_totalA = curA + curB / pNow;  // all capital as token A
-  // P_LOW_A = pNow * 1.005 (just above current so price enters on the way up/down)
-  const A_plo    = exitedHigh ? pNow * 0.995 : pNow * 1.005;
+  const A_plo = exitedHigh ? pNow * 0.995 : pNow * 1.005;
   // Recovery target = initB (original capital in token B)
   const A_phi    = solvePhiFullA(A_totalA, A_plo, initB);
   if (!A_phi || A_phi <= A_plo) {
@@ -549,8 +548,7 @@ function run() {
   // Buy injectPct more token A at current price
   const B_extraA    = curA * injectPct;
   const B_cost_B    = B_extraA * pNow;        // cost in token B
-  const B_totalA    = curA + B_extraA;        // + existing B-fees converted
-  // We also still have curB (fees), convert to A for full position
+  const B_totalA    = curA + B_extraA;
   const B_totalA_all = B_totalA + curB / pNow;
   const B_plo       = A_plo; // same P_LOW
   // Recovery target B = initB + B_cost_B  (recover EVERYTHING: initial + injected)
@@ -571,13 +569,15 @@ function run() {
     `Comprás <strong class="green">${fT(B_extraA, tokA())}</strong> = <strong>${f$(B_cost_B,2,'')} ${tokB()}</strong> al precio ${f$(pNow,2,'')} ${tokB()}/${tokA()} · Total ${tokA()} en posición: <strong class="cyan">${fT(B_totalA_all, tokA())}</strong>`;
 
   S = {
-    amtA0,amtB0,p0,plo0,phi0,apr,days,pNow,injectPct,
-    initB,fees_B,L0,curA,curB,curVal_B,
-    exitedLow,exitedHigh,inRange,
-    A_plo,A_phi,A_L,A_totalA,A_exitB,A_width,A_pnl,
-    B_extraA,B_cost_B,B_totalA_all,B_plo,B_phi,B_L,
-    B_exitB,B_width,B_pnl,B_pnl_net,B_targetB,
-    tA:tokA(), tB:tokB(),
+    capital: initB,
+    p0, plo0, phi0, pNow, injectPct,
+    amtA0, amtB0,
+    initB, L0, curA, curB, curVal_B,
+    exitedLow, exitedHigh, inRange,
+    A_plo, A_phi, A_L, A_totalA, A_exitB, A_width, A_pnl,
+    B_extraA, B_cost_B, B_totalA_all, B_plo, B_phi, B_L,
+    B_exitB, B_width, B_pnl, B_pnl_net, B_targetB,
+    tA: tokA(), tB: tokB(),
   };
 
   renderAll();
@@ -925,6 +925,7 @@ function addToHistory(which) {
   const snap = {
     n: history.length+1,
     which,
+    capital: S.initB,
     pNow: S.pNow,
     plo:  which==='A' ? S.A_plo : S.B_plo,
     phi:  which==='A' ? S.A_phi : S.B_phi,
@@ -969,24 +970,21 @@ function renderHistory() {
 
 function loadSnapshot(i) {
   const h = history[i];
-  // Load the snapshot's resulting range as the new "current position"
-  g('iP0').value   = h.pNow;
-  g('iPLo').value  = h.plo.toFixed(4);
-  g('iPHi').value  = h.phi.toFixed(4);
-  g('iAmtA').value = h.totalA.toFixed(6);
-  g('iAmtB').value = '0';
-  g('iTokA').value = h.tA;
-  g('iTokB').value = h.tB;
+  g('iCapital').value = h.capital;
+  g('iP0').value = h.pNow;
+  g('iPLo').value = h.plo.toFixed(4);
+  g('iPHi').value = h.phi.toFixed(4);
+  g('iPNow').value = h.pNow;
   onInput();
+  run();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function clearHistory() { history=[]; renderHistory(); }
 
 function reset() {
-  [['iAmtA',2],['iAmtB',5000],['iP0',2500],['iPLo',2000],['iPHi',3000],
-   ['iApr',25],['iDays',30],['iPNow',1500],['injectPct',50],
-   ['iTokA','ETH'],['iTokB','USDC']].forEach(([id,v])=>g(id).value=v);
+  [['iCapital',5000],['iP0',2500],['iPLo',2000],['iPHi',3000],
+   ['iPNow',1500],['injectPct',50]].forEach(([id,v])=>g(id).value=v);
   history=[];
   updateSlider(g('injectPct'));
   onInput(); run();
