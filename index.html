@@ -73,7 +73,7 @@ body{background:var(--bg);color:var(--txt);font-family:var(--mono);min-height:10
 .ifield{padding:12px 14px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);}
 .ifield:last-child{border-right:none;}
 .ilbl{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--txt2);margin-bottom:5px;}
-.ihint{color:var(--txt3);font-size:6px;margin-left:3px;}
+.ihint{color:var(--txt3);font-size:6px;margin-left:3px;text-transform:none;letter-spacing:0;}
 input[type=number],input[type=text],select{
   width:100%;background:var(--bg);border:1px solid var(--line2);
   border-radius:6px;color:var(--txt);font-family:var(--mono);font-size:13px;
@@ -85,6 +85,7 @@ input:focus,select:focus{border-color:var(--cyan2);box-shadow:0 0 0 3px var(--cy
 select{cursor:pointer;}
 .iactions{padding:11px 14px;border-top:1px solid var(--line);
   display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.warn{font-size:9px;color:var(--red);padding:0 14px 11px;}
 
 /* ── BUTTONS ── */
 .btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;
@@ -136,6 +137,12 @@ select{cursor:pointer;}
 .slb{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--txt2);margin-bottom:3px;}
 .svl{font-size:16px;font-weight:700;line-height:1;}
 .ssb{font-size:8px;color:var(--txt2);margin-top:2px;}
+
+/* ── ASSET DISTRIBUTION BAR ── */
+.abar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--bg);margin:4px 0 6px;border:1px solid var(--line);}
+.abar-a{background:linear-gradient(90deg,var(--cyan2),var(--cyan));transition:width .2s;}
+.abar-b{background:linear-gradient(90deg,var(--gold2),var(--gold));transition:width .2s;}
+.abar-lbl{display:flex;justify-content:space-between;font-size:9px;margin-bottom:2px;}
 
 /* ── INJECT BOX ── */
 .ibox{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:12px;margin-bottom:11px;}
@@ -250,11 +257,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <div class="ci ci-g">⚙</div>
     <div>
       <div class="ct">Configuración del par</div>
-      <div class="cs">Funciona para cualquier par: ETH/USDC, BTC/ETH, MATIC/USDC, etc.</div>
+      <div class="cs">100% genérico: definí cualquier Token A / Token B (ETH/USDC, BTC/ETH, MATIC/DAI…)</div>
     </div>
     <div style="margin-left:auto;display:flex;gap:18px;flex-wrap:wrap;">
       <div style="text-align:right;">
-        <div style="font-size:7px;color:var(--txt2);letter-spacing:1px;text-transform:uppercase;">Capital inicial (USD)</div>
+        <div style="font-size:7px;color:var(--txt2);letter-spacing:1px;text-transform:uppercase;">Capital inicial</div>
         <div id="dInitVal" style="font-family:var(--head);font-size:15px;color:var(--gold);">$—</div>
       </div>
       <div style="text-align:right;">
@@ -264,15 +271,16 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     </div>
   </div>
   <div class="igrid">
-    <div class="ifield" style="grid-column:span 2;">
-      <div class="ilbl">Par de tokens</div>
-      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
-        <div style="font-weight:700;letter-spacing:.08em;color:var(--txt);">ETH / USDC</div>
-        <div style="font-size:11px;color:var(--txt2);">Distribución calculada automáticamente</div>
-      </div>
+    <div class="ifield">
+      <div class="ilbl">Token A (volátil)</div>
+      <input type="text" id="iTokA" value="ETH" maxlength="14" oninput="onInput();run()">
     </div>
     <div class="ifield">
-      <div class="ilbl">Capital inicial (USD)</div>
+      <div class="ilbl">Token B (cotización)</div>
+      <input type="text" id="iTokB" value="USDC" maxlength="14" oninput="onInput();run()">
+    </div>
+    <div class="ifield">
+      <div class="ilbl">Capital inicial <span id="capLblUnit" class="ihint">(en Token B)</span></div>
       <input type="number" id="iCapital" value="5000" step="10" min="0" oninput="onInput()">
     </div>
     <div class="ifield">
@@ -288,6 +296,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       <input type="number" id="iPHi" value="3000" step="1" min="0.000001" oninput="onInput()">
     </div>
   </div>
+  <div id="initWarn" class="warn" style="display:none;"></div>
   <div class="iactions">
     <button class="btn btn-gold" onclick="run()">▶ Simular escenarios</button>
     <button class="btn btn-ghost" onclick="reset()">↺ Reset</button>
@@ -311,6 +320,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   <div id="sitPill" style="margin-left:auto;flex-shrink:0;"></div>
 </div>
 
+<!-- ESTADO ACTUAL -->
+<div class="sec">Estado & impermanent loss</div>
+<div id="statusSection"></div>
+
 <!-- REBALANCE HISTORY -->
 <div class="sec">Historial de rebalanceos</div>
 <div id="histSection">
@@ -327,20 +340,25 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 <div class="card" style="margin-bottom:13px;">
   <div class="ch">
     <div class="ci ci-gr">⊕</div>
-    <div class="ct" style="color:var(--green);">Control de reinyección (Estrategia B)</div>
-    <div class="cs">Cuánto token A adicional comprás al precio actual para reinyectar</div>
+    <div class="ct" style="color:var(--green);">Control de reinyección (Estrategia B — promediado)</div>
+    <div class="cs">Capital adicional que aportás al precio caído para promediar la entrada y recuperarlo junto al capital inicial</div>
   </div>
   <div class="cb">
-    <div style="font-size:8px;color:var(--txt2);margin-bottom:6px;">
-      % del token A actual que comprás extra al precio caído:
-    </div>
-    <div class="slider-wrap">
-      <input type="range" id="injectPct" min="10" max="200" value="50" step="5"
-        oninput="updateSlider(this);run()">
-      <div class="slider-labels">
-        <span>10%</span>
-        <span id="injectPctLbl" style="color:var(--green);font-weight:700;">50% extra</span>
-        <span>200%</span>
+    <div class="irow" style="margin-bottom:4px;">
+      <div style="flex:1;min-width:170px;">
+        <div class="ilbl">Capital adicional a inyectar <span id="injectAmtLbl" class="ihint">(en Token B)</span></div>
+        <input type="number" id="iInjectAmt" value="1600" step="10" min="0" oninput="onInjectAmtInput(this)">
+      </div>
+      <div style="flex:1;min-width:170px;">
+        <div class="ilbl">Ajuste rápido (% del Token A que tenés ahora)</div>
+        <div class="slider-wrap" style="margin:6px 0 0;">
+          <input type="range" id="injectPct" min="0" max="200" value="50" step="5" oninput="onInjectPctInput(this)">
+          <div class="slider-labels">
+            <span>0%</span>
+            <span id="injectPctLbl" style="color:var(--green);font-weight:700;">50%</span>
+            <span>200%</span>
+          </div>
+        </div>
       </div>
     </div>
     <div id="injectPreview" style="font-size:9px;color:var(--txt2);margin-top:6px;"></div>
@@ -352,8 +370,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <div class="ph">
       <div class="ci ci-a">A</div>
       <div>
-        <div class="ct" style="color:var(--amber);">Sin reinyección</div>
-        <div class="cs">Solo con lo que tenés · La herramienta calcula P_HIGH</div>
+        <div class="ct" style="color:var(--amber);">Rebalanceo Cero</div>
+        <div class="cs">Sin inyectar más capital · La herramienta calcula el P_HIGH exacto de recuperación total</div>
       </div>
     </div>
     <div class="pb" id="panelA"><div class="empty"><span>📐</span>Presioná Simular</div></div>
@@ -362,8 +380,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <div class="ph">
       <div class="ci ci-gr">B</div>
       <div>
-        <div class="ct" style="color:var(--green);">Con reinyección</div>
-        <div class="cs">Comprás más token A · Rango más estrecho · Recuperás todo</div>
+        <div class="ct" style="color:var(--green);">Reinyección Promediada</div>
+        <div class="cs">Comprás más Token A abajo · Rango más estrecho · Recuperás inicial + inyectado</div>
       </div>
     </div>
     <div class="pb" id="panelB"><div class="empty"><span>💉</span>Presioná Simular</div></div>
@@ -382,121 +400,163 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 </div><!-- /wrap -->
 
 <script>
-// ══ MATH ══
+// ══════════════════════════════════════════════════════════════════
+// MATH — Uniswap V3 concentrated-liquidity formulas.
+// Fully generic: "Token A" is the volatile/base asset, "Token B" is the
+// quote asset. Price P is always expressed as (Token B per Token A).
+// Every strategy is derived purely from P, P_LOW, P_HIGH and amounts —
+// no token symbol is ever assumed, so the same math works for
+// ETH/USDC, BTC/ETH, MATIC/DAI, or any other pair.
+// ══════════════════════════════════════════════════════════════════
 const sq = x => Math.sqrt(Math.max(0, x));
 
-function calcL(amtA, amtB, p, plo, phi) {
-  // amtA = token A (volatile), amtB = token B (quote)
-  // price = amtB per amtA
-  if (p <= plo || p >= phi) return 0;
-  const sp=sq(p), sl=sq(plo), sh=sq(phi);
-  const Lx = amtA * sp * sh / (sh - sp);
-  const Ly = amtB / (sp - sl);
-  return Math.min(Lx, Ly);
-}
+// Common quote-asset symbols that behave like USD, purely for display
+// formatting (whether to prefix "$" or suffix the token symbol).
+const STABLES = ['USDC','USDT','DAI','BUSD','TUSD','USDP','FRAX','LUSD','GUSD','PYUSD','USDE'];
+const isStableSym = t => STABLES.includes(String(t || '').trim().toUpperCase());
 
+// amountsAt: token amounts held by a position of liquidity L at price p,
+// within range [plo, phi]. Below range → 100% Token A. Above range →
+// 100% Token B. This IS the impermanent-loss / distribution engine.
 function amountsAt(L, p, plo, phi) {
-  const sp=sq(p), sl=sq(plo), sh=sq(phi);
-  if (p <= plo) return { a: L*(sh-sl)/(sl*sh), b: 0 };           // 100% token A
-  if (p >= phi) return { a: 0,                 b: L*(sh-sl) };    // 100% token B
-  return { a: L*(sh-sp)/(sp*sh), b: L*(sp-sl) };
+  const sp = sq(p), sl = sq(plo), sh = sq(phi);
+  if (p <= plo) return { a: L * (sh - sl) / (sl * sh), b: 0 };
+  if (p >= phi) return { a: 0, b: L * (sh - sl) };
+  return { a: L * (sh - sp) / (sp * sh), b: L * (sp - sl) };
 }
 
-// Value in USD: a_usd = amtA * priceInUSD_A, b_usd = amtB * priceInUSD_B
-// For single-quote pairs (A/USDC), priceA_usd = pNow, priceB_usd = 1
-// For volatile pairs (ETH/BTC), we track in terms of token B value
-// Strategy: always express "recovery target" in token B units
-// This makes it universal — recovery = same token B value as initial deposit
-
-// Solve P_HIGH such that when price = phi, exit value in B = target
-// Exit: 100% token B → L*(sqrt(phi)-sqrt(plo)) = targetB
-// → sqrt(phi) = targetB/L + sqrt(plo) → phi = (targetB/L + sqrt(plo))²
-function solvePhiForTargetB(L, plo, targetB) {
-  if (L <= 0 || targetB <= 0) return null;
-  const v = targetB / L + sq(plo);
-  return v * v;
+// Given a capital amount fully denominated in Token B, deposited at price
+// p (inside [plo, phi]), solve for the liquidity L that consumes exactly
+// that capital. Derived from V(p) = a(p)*p + b(p) = L*(2*sp - sl - sp²/sh).
+function calcLfromCapital(capitalB, p, plo, phi) {
+  if (capitalB <= 0 || p <= plo || p >= phi || plo <= 0 || phi <= plo) return 0;
+  const sp = sq(p), sl = sq(plo), sh = sq(phi);
+  const denom = 2 * sp - sl - sp * sp / sh;
+  return denom > 0 ? capitalB / denom : 0;
 }
 
-// Given total capital in B-units at pNow, open position with plo fixed
-// all token A (convert everything to A at pNow, since we exited below)
-// amtA_total = total_B / pNow  (all capital as token A)
-// Then L = amtA * sqrt(plo) * sqrt(phi) / (sqrt(phi) - sqrt(plo))
-// And exit_B = L*(sqrt(phi)-sqrt(plo)) = amtA * sqrt(plo) * sqrt(phi)
-// For exit_B = targetB:
-//   amtA_total * sqrt(plo) * sqrt(phi) = targetB
+// A position opened entirely in Token A (valid when price ≤ plo at
+// deposit time): L = amtA * sqrt(plo) * sqrt(phi) / (sqrt(phi) - sqrt(plo)).
+function calcLfullA(amtA, plo, phi) {
+  const sl = sq(plo), sh = sq(phi);
+  if (sh <= sl) return 0;
+  return amtA * sl * sh / (sh - sl);
+}
+
+// Exiting that position through the top (price ≥ phi) converts it 100%
+// to Token B: exitB = amtA_total * sqrt(plo) * sqrt(phi). Solving for
+// phi given a target exitB is the core of the Rebalanceo Cero strategy:
 //   sqrt(phi) = targetB / (amtA_total * sqrt(plo))
-//   phi = [targetB / (amtA_total * sqrt(plo))]²
 function solvePhiFullA(amtA_total, plo, targetB) {
   if (amtA_total <= 0 || plo <= 0 || targetB <= 0) return null;
   const v = targetB / (amtA_total * sq(plo));
   return v * v;
 }
 
-function calcLfullA(amtA, plo, phi) {
-  // position opened 100% token A at exactly plo
-  const sl = sq(plo), sh = sq(phi);
-  if (sh <= sl) return 0;
-  return amtA * sl * sh / (sh - sl);
-}
+// A small, fixed cushion so the new P_LOW never sits exactly on the live
+// price (avoids a degenerate zero-width entry and possible /0 in sqrt
+// differences). 0.5% is a display/UX choice, not part of the recovery math.
+const ENTRY_BUFFER = 0.005;
 
 // ══ FORMAT ══
-const f$ = (n, d=2, sym='$') => {
+const fT = (n, sym, d = 4) => {
   if (isNaN(n) || n === null || n === undefined) return '—';
-  const neg=n<0, a=Math.abs(n);
-  const s = a>=1e9?(a/1e9).toFixed(2)+'B':a>=1e6?(a/1e6).toFixed(2)+'M':
-            a>=1000?a.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}):a.toFixed(d);
-  return (neg?'-':'') + sym + s;
+  const neg = n < 0, a = Math.abs(n);
+  return (neg ? '-' : '') + a.toFixed(d) + ' ' + sym;
 };
-const fT = (n, sym, d=4) => {
-  if (isNaN(n)||n===null) return '—';
-  const neg=n<0,a=Math.abs(n);
-  return (neg?'-':'')+a.toFixed(d)+' '+sym;
-};
-const fp  = n => (n>=0?'+':'') + (n*100).toFixed(2) + '%';
-const fd$ = (n,d=2) => (n>=0?'+':'-') + '$' + Math.abs(n).toFixed(d);
+const fp = n => (isNaN(n) ? '—' : (n >= 0 ? '+' : '') + (n * 100).toFixed(2) + '%');
 const cls = n => n >= 0 ? 'green' : 'red';
-const g   = id => document.getElementById(id);
+const g = id => document.getElementById(id);
+
+// Capital-style formatting for values denominated in Token B: "$" prefix
+// for common stablecoins, token-suffix for anything else (BTC, ETH…).
+function fB(n, tB, d = 2) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  const neg = n < 0, a = Math.abs(n);
+  const s = a >= 1e9 ? (a / 1e9).toFixed(2) + 'B' : a >= 1e6 ? (a / 1e6).toFixed(2) + 'M' :
+            a >= 1000 ? a.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }) : a.toFixed(d);
+  const stable = isStableSym(tB);
+  return (neg ? '-' : '') + (stable ? '$' : '') + s + (stable ? '' : ' ' + tB);
+}
+function fdB(n, tB, d = 2) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return (n >= 0 ? '+' : '-') + fB(Math.abs(n), tB, d);
+}
+function fmtP(p, tB) {
+  if (p === null || p === undefined || isNaN(p)) return '—';
+  const stable = isStableSym(tB);
+  let n;
+  if (p >= 1000) n = p.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  else if (p >= 1) n = p.toFixed(2);
+  else if (p >= 0.0001) n = p.toFixed(6);
+  else n = p.toPrecision(4);
+  return (stable ? '$' : '') + n + (stable ? '' : (tB ? ' ' + tB : ''));
+}
 
 // ══ STATE ══
 let S = {};
 let history = []; // array of rebalance snapshots
 
-function tokA()  { return 'ETH'; }
-function tokB()  { return 'USDC'; }
-
-function calcLfromCapital(capitalB, p, plo, phi) {
-  if (capitalB <= 0 || p <= plo || p >= phi || plo <= 0 || phi <= plo) return 0;
-  const sp = sq(p), sl = sq(plo), sh = sq(phi);
-  const denom = 2*sp - sl - sp*sp/sh;
-  return denom > 0 ? capitalB / denom : 0;
-}
+function tokA() { const v = (g('iTokA').value || '').trim().toUpperCase(); return v || 'TOKEN A'; }
+function tokB() { const v = (g('iTokB').value || '').trim().toUpperCase(); return v || 'TOKEN B'; }
 
 function onInput() {
   const capital = +g('iCapital').value || 0;
-  const p0 = +g('iP0').value || 1;
-  const plo = +g('iPLo').value || 1;
-  const phi = +g('iPHi').value || 1;
-  const initB = capital;
-  g('dInitVal').textContent = f$(initB, 2, '$');
-  const halfW = p0 > 0 ? (phi - plo) / (2 * p0) * 100 : 0;
-  g('dWidth').textContent = halfW > 0 ? '±' + halfW.toFixed(1) + '%' : '—';
+  const p0 = +g('iP0').value || 0;
+  const plo = +g('iPLo').value || 0;
+  const phi = +g('iPHi').value || 0;
+  const tA = tokA(), tB = tokB();
 
-  const L0 = calcLfromCapital(initB, p0, plo, phi);
+  g('pairLabel').textContent = tA + '/' + tB;
+  g('capLblUnit').textContent = '(en ' + tB + ')';
+  g('injectAmtLbl').textContent = '(en ' + tB + ')';
+  g('dInitVal').textContent = capital > 0 ? fB(capital, tB, 2) : '—';
+  const halfW = (p0 > 0 && phi > plo) ? (phi - plo) / (2 * p0) * 100 : 0;
+  g('dWidth').textContent = (phi > plo && p0 > 0) ? '±' + halfW.toFixed(1) + '%' : '—';
+
+  const L0 = calcLfromCapital(capital, p0, plo, phi);
+  const warnEl = g('initWarn');
   if (L0 > 0) {
-    const startAmounts = amountsAt(L0, p0, plo, phi);
-    g('initSummary').textContent =
-      `≈ ${fT(startAmounts.a, tokA())} + ${f$(startAmounts.b, 2, '')} ${tokB()} @ ${fmtP(p0)}`;
+    const st = amountsAt(L0, p0, plo, phi);
+    g('initSummary').innerHTML = `≈ ${fT(st.a, tA)} + ${fT(st.b, tB, 2)} @ ${fmtP(p0, tB)}`;
+    warnEl.style.display = 'none';
   } else {
-    g('initSummary').textContent = 'Ingresá Capital y rango válidos; el precio de entrada debe quedar dentro de P_LOW y P_HIGH.';
+    g('initSummary').textContent = '';
+    if (capital > 0) {
+      warnEl.style.display = 'block';
+      warnEl.textContent = plo >= phi ? '⚠ P_LOW debe ser menor que P_HIGH.' :
+        (p0 <= plo || p0 >= phi) ? '⚠ El precio de entrada P₀ debe quedar dentro de P_LOW y P_HIGH.' :
+        '⚠ Ingresá un capital y un rango válidos.';
+    } else {
+      warnEl.style.display = 'none';
+    }
   }
 }
 
 function updateSlider(el) {
-  const pct = (+el.min + (+el.value - +el.min));
   const range = +el.max - +el.min;
-  const filled = ((+el.value - +el.min) / range * 100).toFixed(1);
+  const filled = range > 0 ? ((+el.value - +el.min) / range * 100).toFixed(1) : '0';
   el.style.setProperty('--pct', filled + '%');
-  g('injectPctLbl').textContent = el.value + '% extra';
+  g('injectPctLbl').textContent = (+el.value).toFixed(0) + '%';
+}
+
+// Quick-select helper: slider drives the amount field (using the last
+// computed Token A balance), the amount field is the value actually used
+// by the math in computeRebalanceStrategies().
+function onInjectPctInput(el) {
+  updateSlider(el);
+  const base = (S.curA || 0) * (S.pNow || +g('iPNow').value || 0);
+  if (base > 0) g('iInjectAmt').value = (base * (+el.value / 100)).toFixed(2);
+  run();
+}
+function onInjectAmtInput(el) {
+  const base = (S.curA || 0) * (S.pNow || +g('iPNow').value || 0);
+  if (base > 0) {
+    const pct = Math.min(200, Math.max(0, (+el.value / base * 100)));
+    g('injectPct').value = pct;
+    updateSlider(g('injectPct'));
+  }
+  run();
 }
 
 function run() {
@@ -505,187 +565,300 @@ function run() {
   const plo0 = +g('iPLo').value;
   const phi0 = +g('iPHi').value;
   const pNow = +g('iPNow').value;
-  const injectPct = +g('injectPct').value/100;
-  if (!capital || !p0 || !plo0 || !phi0 || plo0 >= phi0 || pNow <= 0 || p0 <= plo0 || p0 >= phi0) return;
+  const tA = tokA(), tB = tokB();
   onInput();
+
+  if (!capital || !p0 || !plo0 || !phi0 || plo0 >= phi0 || pNow <= 0 || p0 <= plo0 || p0 >= phi0) {
+    g('statusSection').innerHTML = '';
+    g('panelA').innerHTML = '<div class="empty"><span>📐</span>Completá "Configuración del par" con valores válidos.</div>';
+    g('panelB').innerHTML = '<div class="empty"><span>💉</span>Completá "Configuración del par" con valores válidos.</div>';
+    g('compareSection').innerHTML = '<div class="empty" style="border:1px solid var(--line);border-radius:12px;padding:24px;"><span>⚖</span>Simulá para ver la comparativa</div>';
+    g('predictSection').innerHTML = '';
+    return;
+  }
 
   const initB = capital;
   const L0 = calcLfromCapital(initB, p0, plo0, phi0);
   if (!L0) return;
 
   const initial = amountsAt(L0, p0, plo0, phi0);
-  const amtA0 = initial.a;
-  const amtB0 = initial.b;
+  const amtA0 = initial.a, amtB0 = initial.b;
 
-  // What we have after price moved
   const cur = amountsAt(L0, pNow, plo0, phi0);
-  const curA = cur.a;
-  const curB_raw = cur.b;
-  const curB = curB_raw;
-  const curVal_B = curA*pNow + curB;
+  const curA = cur.a, curB = cur.b;
+  const curVal_B = curA * pNow + curB;
 
-  const exitedLow  = pNow <= plo0;
+  // Impermanent loss: LP value vs. simply holding the originally
+  // deposited token amounts, both valued at the current price.
+  const hodlVal_B = amtA0 * pNow + amtB0;
+  const il_abs = curVal_B - hodlVal_B;
+  const il_pct = hodlVal_B > 0 ? il_abs / hodlVal_B : 0;
+  const atRisk = Math.max(0, initB - curVal_B);
+
+  const exitedLow = pNow <= plo0;
   const exitedHigh = pNow >= phi0;
-  const inRange    = !exitedLow && !exitedHigh;
-
-  // ── STRATEGY A: no injection ──
-  // Convert everything to token A at current price
-  // (since if exited low → 100% A already; fees in B → convert to A)
-  const A_totalA = curA + curB / pNow;  // all capital as token A
-  const A_plo = exitedHigh ? pNow * 0.995 : pNow * 1.005;
-  // Recovery target = initB (original capital in token B)
-  const A_phi    = solvePhiFullA(A_totalA, A_plo, initB);
-  if (!A_phi || A_phi <= A_plo) {
-    g('panelA').innerHTML='<div class="empty"><span>⚠️</span>No se puede calcular P_HIGH para este escenario. Verificá los valores.</div>';
-    return;
-  }
-  const A_L      = calcLfullA(A_totalA, A_plo, A_phi);
-  const A_exitB  = A_L * (sq(A_phi) - sq(A_plo));
-  const A_width  = (A_phi - A_plo) / A_plo * 100;
-  const A_pnl    = A_exitB - initB;
-
-  // ── STRATEGY B: buy more token A ──
-  // Buy injectPct more token A at current price
-  const B_extraA    = curA * injectPct;
-  const B_cost_B    = B_extraA * pNow;        // cost in token B
-  const B_totalA    = curA + B_extraA;
-  const B_totalA_all = B_totalA + curB / pNow;
-  const B_plo       = A_plo; // same P_LOW
-  // Recovery target B = initB + B_cost_B  (recover EVERYTHING: initial + injected)
-  const B_targetB   = initB + B_cost_B;
-  const B_phi       = solvePhiFullA(B_totalA_all, B_plo, B_targetB);
-  if (!B_phi || B_phi <= B_plo) {
-    g('panelB').innerHTML='<div class="empty"><span>⚠️</span>No se puede calcular. Ajustá el % de inyección.</div>';
-    return;
-  }
-  const B_L         = calcLfullA(B_totalA_all, B_plo, B_phi);
-  const B_exitB     = B_L * (sq(B_phi) - sq(B_plo));
-  const B_width     = (B_phi - B_plo) / B_plo * 100;
-  const B_pnl       = B_exitB - B_targetB;    // should be ≈0 by construction
-  const B_pnl_net   = B_exitB - initB;         // vs original capital only
-
-  // Preview
-  g('injectPreview').innerHTML =
-    `Comprás <strong class="green">${fT(B_extraA, tokA())}</strong> = <strong>${f$(B_cost_B,2,'')} ${tokB()}</strong> al precio ${f$(pNow,2,'')} ${tokB()}/${tokA()} · Total ${tokA()} en posición: <strong class="cyan">${fT(B_totalA_all, tokA())}</strong>`;
+  const inRange = !exitedLow && !exitedHigh;
 
   S = {
-    capital: initB,
-    p0, plo0, phi0, pNow, injectPct,
-    amtA0, amtB0,
-    initB, L0, curA, curB, curVal_B,
+    tA, tB, capital, p0, plo0, phi0, pNow,
+    initB, L0, amtA0, amtB0, curA, curB, curVal_B, hodlVal_B, il_abs, il_pct, atRisk,
     exitedLow, exitedHigh, inRange,
-    A_plo, A_phi, A_L, A_totalA, A_exitB, A_width, A_pnl,
-    B_extraA, B_cost_B, B_totalA_all, B_plo, B_phi, B_L,
-    B_exitB, B_width, B_pnl, B_pnl_net, B_targetB,
-    tA: tokA(), tB: tokB(),
   };
+
+  // The recovery formulas (calcLfullA / solvePhiFullA) are only valid for
+  // a position deposited 100% in Token A, i.e. exactly the exited-low
+  // case. We deliberately do NOT reuse them outside that domain.
+  if (exitedLow) computeRebalanceStrategies();
 
   renderAll();
 }
 
+function computeRebalanceStrategies() {
+  const s = S;
+  const injectAmt = Math.max(0, +g('iInjectAmt').value || 0);
+
+  // ── Strategy A: Rebalanceo Cero (no injection) ──
+  // curB is guaranteed 0 here (exitedLow ⇒ 100% Token A already).
+  const A_totalA = s.curA;
+  const A_plo = s.pNow * (1 + ENTRY_BUFFER);
+  const A_phi = solvePhiFullA(A_totalA, A_plo, s.initB);
+  let A = { valid: false };
+  if (A_phi && A_phi > A_plo) {
+    const A_L = calcLfullA(A_totalA, A_plo, A_phi);
+    const A_exitB = A_L * (sq(A_phi) - sq(A_plo));
+    A = {
+      valid: true, totalA: A_totalA, plo: A_plo, phi: A_phi, L: A_L,
+      exitB: A_exitB, width: (A_phi - A_plo) / A_plo * 100, pnl: A_exitB - s.initB,
+    };
+  }
+
+  // ── Strategy B: Reinyección Promediada ──
+  // Same entry floor as A; buying more Token A now raises totalA, which
+  // lets the same targetB be reached at a LOWER, narrower P_HIGH.
+  const B_extraA = s.pNow > 0 ? injectAmt / s.pNow : 0;
+  const B_totalA = s.curA + B_extraA;
+  const B_plo = A_plo;
+  const B_targetB = s.initB + injectAmt; // recover initial + injected
+  const B_phi = solvePhiFullA(B_totalA, B_plo, B_targetB);
+  let B = { valid: false, injectAmt, extraA: B_extraA };
+  if (B_phi && B_phi > B_plo) {
+    const B_L = calcLfullA(B_totalA, B_plo, B_phi);
+    const B_exitB = B_L * (sq(B_phi) - sq(B_plo));
+    B = {
+      valid: true, injectAmt, extraA: B_extraA, totalA: B_totalA, plo: B_plo, phi: B_phi, L: B_L,
+      exitB: B_exitB, width: (B_phi - B_plo) / B_plo * 100,
+      pnlVsTarget: B_exitB - B_targetB, pnlNet: B_exitB - s.initB, targetB: B_targetB,
+    };
+  }
+
+  S.A = A;
+  S.B = B;
+
+  g('injectPreview').innerHTML = injectAmt > 0
+    ? `Comprás <strong class="green">${fT(B_extraA, s.tA)}</strong> = <strong>${fB(injectAmt, s.tB)}</strong> al precio ${fmtP(s.pNow, s.tB)} · Total ${s.tA} en posición: <strong class="cyan">${fT(B_totalA, s.tA)}</strong>`
+    : `Sin inyección adicional, la Estrategia B coincide exactamente con la Estrategia A.`;
+}
+
 // ── RANGE VIZ ──
-function makeRangeViz(pNow, plo, phi, pinColor) {
+function makeRangeViz(pNow, plo, phi, pinColor, tB) {
   const minP = Math.min(pNow, plo) * 0.85;
   const maxP = Math.max(pNow, phi) * 1.10;
   const span = maxP - minP;
-  const px   = p => ((p-minP)/span*100).toFixed(2)+'%';
-  const inR  = pNow>=plo && pNow<=phi;
+  const px = p => ((p - minP) / span * 100).toFixed(2) + '%';
+  const inR = pNow >= plo && pNow <= phi;
   const fill = inR
     ? 'linear-gradient(90deg,rgba(0,240,128,.3),rgba(0,207,255,.3))'
     : 'linear-gradient(90deg,rgba(255,176,32,.25),rgba(0,207,255,.2))';
   const nowLbl = pNow <= plo ? 'actual (entrará)' : 'actual';
   return `<div class="rviz">
     <div class="rtrack">
-      <div class="rfill" style="left:${px(plo)};width:${((phi-plo)/span*100).toFixed(2)}%;background:${fill};"></div>
+      <div class="rfill" style="left:${px(plo)};width:${((phi - plo) / span * 100).toFixed(2)}%;background:${fill};"></div>
       <div class="rpin" style="left:${px(pNow)};background:${pinColor};color:${pinColor};"></div>
-      <span class="rtick" style="left:${px(plo)}">${fmtP(plo)}</span>
-      <span class="rtick" style="left:${px(phi)}">${fmtP(phi)}</span>
+      <span class="rtick" style="left:${px(plo)}">${fmtP(plo, tB)}</span>
+      <span class="rtick" style="left:${px(phi)}">${fmtP(phi, tB)}</span>
       <span class="rtick" style="left:${px(pNow)};color:${pinColor};font-weight:700;">${nowLbl}</span>
     </div>
     <div class="rlabels">
-      <span>P_LOW <strong class="amber">${fmtP(plo)}</strong></span>
-      <span class="txt2" style="font-size:8px;">P_NOW <strong style="color:var(--txt)">${fmtP(pNow)}</strong></span>
-      <span>P_HIGH <strong style="color:${pinColor}">${fmtP(phi)}</strong></span>
+      <span>P_LOW <strong class="amber">${fmtP(plo, tB)}</strong></span>
+      <span class="txt2" style="font-size:8px;">P_NOW <strong style="color:var(--txt)">${fmtP(pNow, tB)}</strong></span>
+      <span>P_HIGH <strong style="color:${pinColor}">${fmtP(phi, tB)}</strong></span>
     </div>
   </div>`;
-}
-
-function fmtP(p) {
-  // smart formatting for price
-  if (p >= 1000) return '$'+p.toLocaleString('en-US',{maximumFractionDigits:0});
-  if (p >= 1)    return '$'+p.toFixed(2);
-  return '$'+p.toFixed(6);
 }
 
 function renderAll() {
   const s = S;
   if (!s.initB) return;
 
-  // Status
-  let narr, pill, hdrCls, hdrTxt;
-  const sym = s.tB === 'USDC'||s.tB==='DAI'||s.tB==='USDT' ? '$' : '';
+  renderSituation(s);
+  renderStatusCard(s);
+
   if (s.exitedLow) {
-    narr = `El precio cayó a <strong class="red">${fmtP(s.pNow)}</strong>, bajo P_LOW (<strong>${fmtP(s.plo0)}</strong>). Pool salió por abajo → tenés <strong class="cyan">${fT(s.curA, s.tA)}</strong> + <strong class="gold">${fT(s.curB, s.tB)}</strong> (fees). Rango inactivo.`;
-    pill = `<span class="pill pill-r"><span class="dot"></span>SALIDA INFERIOR → 100% ${s.tA}</span>`;
-    hdrCls='pill pill-r'; hdrTxt='PRECIO CAÍDO';
+    renderStrategyPanels(s);
+    renderCompare(s);
+    g('predictSection').innerHTML = makePredictSection(s);
   } else if (s.exitedHigh) {
-    narr = `El precio subió a <strong class="amber">${fmtP(s.pNow)}</strong>, sobre P_HIGH (<strong>${fmtP(s.phi0)}</strong>). Pool salió por arriba → tenés <strong class="gold">${fT(s.curB, s.tB)}</strong> puro. Rango inactivo.`;
-    pill = `<span class="pill pill-a"><span class="dot"></span>SALIDA SUPERIOR → 100% ${s.tB}</span>`;
-    hdrCls='pill pill-a'; hdrTxt='PRECIO SUBIÓ';
+    renderExitedHighPanels(s);
+    g('compareSection').innerHTML = '<div class="empty" style="border:1px solid var(--line);border-radius:12px;padding:24px;"><span>⚖</span>La comparativa A/B se activa cuando el precio cae bajo P_LOW.</div>';
+    g('predictSection').innerHTML = '';
   } else {
-    narr = `El precio está en <strong class="green">${fmtP(s.pNow)}</strong>, dentro del rango <strong>${fmtP(s.plo0)}–${fmtP(s.phi0)}</strong>. Pool activo.`;
+    renderInRangePanels(s);
+    g('compareSection').innerHTML = '<div class="empty" style="border:1px solid var(--line);border-radius:12px;padding:24px;"><span>⚖</span>La comparativa A/B se activa cuando el precio cae bajo P_LOW.</div>';
+    g('predictSection').innerHTML = '';
+  }
+
+  renderHistory();
+}
+
+function renderSituation(s) {
+  let narr, pill, hdrCls, hdrTxt;
+  if (s.exitedLow) {
+    narr = `El precio cayó a <strong class="red">${fmtP(s.pNow, s.tB)}</strong>, bajo P_LOW (<strong>${fmtP(s.plo0, s.tB)}</strong>). La posición salió por abajo → tenés <strong class="cyan">${fT(s.curA, s.tA)}</strong> + <strong class="gold">${fT(s.curB, s.tB)}</strong>. Rango inactivo.`;
+    pill = `<span class="pill pill-r"><span class="dot"></span>SALIDA INFERIOR → 100% ${s.tA}</span>`;
+    hdrCls = 'pill pill-r'; hdrTxt = 'PRECIO CAÍDO';
+  } else if (s.exitedHigh) {
+    narr = `El precio subió a <strong class="amber">${fmtP(s.pNow, s.tB)}</strong>, sobre P_HIGH (<strong>${fmtP(s.phi0, s.tB)}</strong>). La posición salió por arriba → tenés <strong class="gold">${fT(s.curB, s.tB)}</strong> puro. Rango inactivo.`;
+    pill = `<span class="pill pill-a"><span class="dot"></span>SALIDA SUPERIOR → 100% ${s.tB}</span>`;
+    hdrCls = 'pill pill-a'; hdrTxt = 'PRECIO SUBIÓ';
+  } else {
+    narr = `El precio está en <strong class="green">${fmtP(s.pNow, s.tB)}</strong>, dentro del rango <strong>${fmtP(s.plo0, s.tB)}–${fmtP(s.phi0, s.tB)}</strong>. Posición activa.`;
     pill = `<span class="pill pill-g"><span class="dot"></span>EN RANGO</span>`;
-    hdrCls='pill pill-g'; hdrTxt='EN RANGO';
+    hdrCls = 'pill pill-g'; hdrTxt = 'EN RANGO';
   }
   g('sitNarr').innerHTML = narr;
   g('sitPill').innerHTML = pill;
   const hp = g('hdrPill');
-  hp.className = hdrCls; hp.innerHTML = '<span class="dot"></span>'+hdrTxt;
+  hp.className = hdrCls; hp.innerHTML = '<span class="dot"></span>' + hdrTxt;
+}
+
+function renderStatusCard(s) {
+  const totalVal = s.curVal_B;
+  const pctA = totalVal > 0 ? (s.curA * s.pNow / totalVal * 100) : 0;
+  const pctB = totalVal > 0 ? (s.curB / totalVal * 100) : 0;
+  const recoveryTxt = (s.exitedLow && s.A && s.A.valid) ? fmtP(s.A.phi, s.tB) : '—';
+  const recoverySub = s.exitedLow ? 'P_HIGH necesario (Estrategia A — Rebalanceo Cero)' : 'se calcula automáticamente si el precio cae bajo P_LOW';
+
+  g('statusSection').innerHTML = `
+    <div class="card">
+      <div class="ch">
+        <div class="ci ci-c">◈</div>
+        <div>
+          <div class="ct">Estado actual de la posición</div>
+          <div class="cs">Distribución de activos, impermanent loss y capital en riesgo</div>
+        </div>
+      </div>
+      <div class="cb">
+        <div class="abar-lbl">
+          <span class="cyan">${s.tA} · ${pctA.toFixed(1)}% · ${fT(s.curA, s.tA)}</span>
+          <span class="gold">${s.tB} · ${pctB.toFixed(1)}% · ${fT(s.curB, s.tB, 2)}</span>
+        </div>
+        <div class="abar">
+          <div class="abar-a" style="width:${pctA.toFixed(2)}%;"></div>
+          <div class="abar-b" style="width:${pctB.toFixed(2)}%;"></div>
+        </div>
+        <div class="sg" style="margin-top:12px;">
+          <div class="st"><div class="slb">Valor actual de la posición</div>
+            <div class="svl">${fB(s.curVal_B, s.tB)}</div>
+            <div class="ssb">vs capital inicial ${fB(s.initB, s.tB)}</div></div>
+          <div class="st"><div class="slb">Impermanent loss vs HODL</div>
+            <div class="svl ${cls(s.il_abs)}">${fp(s.il_pct)}</div>
+            <div class="ssb">${fdB(s.il_abs, s.tB)} vs mantener ${fT(s.amtA0, s.tA)} + ${fT(s.amtB0, s.tB, 2)} sin LP</div></div>
+          <div class="st"><div class="slb">Capital en riesgo</div>
+            <div class="svl ${s.atRisk > 0 ? 'red' : 'green'}">${s.atRisk > 0 ? fB(s.atRisk, s.tB) : 'Recuperado ✓'}</div>
+            <div class="ssb">diferencia para volver al capital inicial</div></div>
+          <div class="st"><div class="slb">Punto de recuperación</div>
+            <div class="svl amber">${recoveryTxt}</div>
+            <div class="ssb">${recoverySub}</div></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderInRangePanels(s) {
+  const msg = `<div class="empty"><span>✅</span>La posición sigue activa dentro del rango original. Las estrategias de Rebalanceo Cero y Reinyección Promediada se calculan automáticamente si el precio cae por debajo de P_LOW (${fmtP(s.plo0, s.tB)}).</div>`;
+  g('panelA').innerHTML = msg;
+  g('panelB').innerHTML = msg;
+}
+
+function renderExitedHighPanels(s) {
+  // The recovery math (calcLfullA / solvePhiFullA) only applies to a
+  // position deposited 100% in Token A. Here the position is 100% Token B,
+  // so instead of forcing that formula outside its domain we show the
+  // realized outcome plus an explicitly-labeled, non-guaranteed suggestion
+  // for redeploying the capital.
+  const pnl = s.curB - s.initB;
+  const widthRatio = (s.phi0 - s.plo0) / s.plo0;
+  const halfWidth = widthRatio / 2;
+  const sugLo = s.pNow * (1 - halfWidth);
+  const sugHi = s.pNow * (1 + halfWidth);
+
+  const html = `
+    <div class="answer ans-green">
+      <div class="answer-ttl" style="color:var(--green);">🎉 Rango completado por arriba</div>
+      <div class="answer-big green">${fB(s.curB, s.tB)}</div>
+      <div class="answer-sub">
+        Tu posición salió 100% en <strong>${s.tB}</strong>. Resultado vs capital inicial (${fB(s.initB, s.tB)}):
+        <strong class="${cls(pnl)}">${fdB(pnl, s.tB)} (${fp(pnl / s.initB)})</strong>.
+      </div>
+    </div>
+    ${makeRangeViz(s.pNow, sugLo, sugHi, 'var(--cyan)', s.tB)}
+    <div style="font-size:9px;color:var(--txt2);line-height:1.7;background:var(--bg2);border:1px solid var(--line);border-radius:7px;padding:10px 12px;">
+      <strong class="cyan">Sugerencia orientativa</strong> para seguir farmeando con el ${s.tB} disponible:
+      un nuevo rango centrado en el precio actual, con la misma amplitud proporcional que la posición original
+      (${fmtP(sugLo, s.tB)} – ${fmtP(sugHi, s.tB)}). A diferencia de las Estrategias A/B, esto <strong>no es una garantía matemática de recuperación</strong> —
+      es sólo un punto de partida simétrico; simulalo cargando ese rango arriba si te sirve.
+    </div>`;
+  g('panelA').innerHTML = html;
+  g('panelB').innerHTML = `<div class="empty"><span>💉</span>La Reinyección Promediada aplica cuando el precio cae bajo P_LOW, no cuando ya saliste por arriba.</div>`;
+}
+
+function renderStrategyPanels(s) {
+  const A = s.A, B = s.B;
 
   // ── PANEL A ──
-  g('panelA').innerHTML = `
+  if (!A.valid) {
+    g('panelA').innerHTML = '<div class="empty"><span>⚠️</span>No se puede calcular P_HIGH para este escenario. Verificá los valores.</div>';
+  } else {
+    g('panelA').innerHTML = `
     <div style="font-size:9px;color:var(--txt2);line-height:1.8;margin-bottom:10px;
       background:var(--bg2);border:1px solid var(--line);border-radius:7px;padding:10px 12px;">
-      Convertís todo a <strong class="cyan">${s.tA}</strong>: 
-      ${fT(s.curA, s.tA)} + ${fT(s.curB, s.tB)} ÷ ${fmtP(s.pNow)} = 
-      <strong class="cyan">${fT(s.A_totalA, s.tA)} total</strong>. 
-      Ponés P_LOW justo sobre el precio actual. La herramienta calcula el P_HIGH exacto para recuperar 
-      <strong class="gold">${fT(s.initB, s.tB)}</strong>.
+      Ya estás 100% en <strong class="cyan">${s.tA}</strong>: <strong class="cyan">${fT(A.totalA, s.tA)}</strong>.
+      Ponés P_LOW justo sobre el precio actual (+${(ENTRY_BUFFER * 100).toFixed(1)}% de margen de entrada).
+      La herramienta calcula el P_HIGH exacto para recuperar <strong class="gold">${fB(s.initB, s.tB)}</strong> — cero pérdida de rebalanceo.
     </div>
 
-    ${makeRangeViz(s.pNow, s.A_plo, s.A_phi, 'var(--amber)')}
+    ${makeRangeViz(s.pNow, A.plo, A.phi, 'var(--amber)', s.tB)}
 
     <div class="answer ans-amber">
-      <div class="answer-ttl" style="color:var(--amber);">📐 P_HIGH necesario para recuperar capital inicial</div>
-      <div class="answer-big amber">${fmtP(s.A_phi)}</div>
+      <div class="answer-ttl" style="color:var(--amber);">📐 P_HIGH necesario para recuperar el capital inicial</div>
+      <div class="answer-big amber">${fmtP(A.phi, s.tB)}</div>
       <div class="answer-sub">
-        Cuando el precio llegue a <strong>${fmtP(s.A_phi)}</strong> tu pool sale 100% ${s.tB} con 
-        <strong>${fT(s.A_exitB, s.tB)}</strong> — igual a tu capital original 
-        <strong>${fT(s.initB, s.tB)}</strong>.
+        Cuando el precio llegue a <strong>${fmtP(A.phi, s.tB)}</strong> tu posición sale 100% ${s.tB} con
+        <strong>${fB(A.exitB, s.tB)}</strong> — igual a tu capital original <strong>${fB(s.initB, s.tB)}</strong>.
       </div>
     </div>
 
     <div class="sg">
       <div class="st"><div class="slb">P_LOW (entrada)</div>
-        <div class="svl amber">${fmtP(s.A_plo)}</div>
-        <div class="ssb">${s.exitedLow?'justo sobre precio actual':s.exitedHigh?'justo bajo precio actual':'en rango'}</div></div>
-      <div class="st"><div class="slb">P_HIGH (objetivo)</div>
-        <div class="svl green">${fmtP(s.A_phi)}</div>
+        <div class="svl amber">${fmtP(A.plo, s.tB)}</div>
+        <div class="ssb">justo sobre precio actual</div></div>
+      <div class="st"><div class="slb">P_HIGH · punto de recuperación</div>
+        <div class="svl green">${fmtP(A.phi, s.tB)}</div>
         <div class="ssb">sale aquí = capital recuperado</div></div>
       <div class="st"><div class="slb">Amplitud del rango</div>
-        <div class="svl cyan">${s.A_width.toFixed(1)}%</div>
+        <div class="svl cyan">${A.width.toFixed(1)}%</div>
         <div class="ssb">desde P_LOW hasta P_HIGH</div></div>
       <div class="st"><div class="slb">${s.tA} en posición</div>
-        <div class="svl cyan">${s.A_totalA.toFixed(4)}</div>
+        <div class="svl cyan">${A.totalA.toFixed(4)}</div>
         <div class="ssb">sin comprar más</div></div>
     </div>
 
     <div class="sg">
       <div class="st"><div class="slb">Liquidez L</div>
-        <div class="svl cyan">${s.A_L.toFixed(4)}</div>
+        <div class="svl cyan">${A.L.toFixed(4)}</div>
         <div class="ssb">vs L₀ = ${s.L0.toFixed(4)}</div></div>
       <div class="st"><div class="slb">${s.tB} al salir por P_HIGH</div>
-        <div class="svl green">${fT(s.A_exitB, s.tB, 2)}</div>
+        <div class="svl green">${fT(A.exitB, s.tB, 2)}</div>
         <div class="ssb">= capital inicial ✓</div></div>
     </div>
 
@@ -693,9 +866,9 @@ function renderAll() {
     <div style="font-size:9px;">
       <div class="sumrow"><span class="sumk">Capital invertido total</span><span class="sumv gold">${fT(s.initB, s.tB, 2)}</span></div>
       <div class="sumrow"><span class="sumk">Inyección extra</span><span class="sumv txt2">—</span></div>
-      <div class="sumrow"><span class="sumk">${s.tB} al salir por P_HIGH</span><span class="sumv green">${fT(s.A_exitB, s.tB, 2)}</span></div>
+      <div class="sumrow"><span class="sumk">${s.tB} al salir por P_HIGH</span><span class="sumv green">${fT(A.exitB, s.tB, 2)}</span></div>
       <div class="sumrow"><span class="sumk">Ganancia / Pérdida</span>
-        <span class="sumv ${cls(s.A_pnl)}">${fd$(s.A_pnl)} (${fp(s.A_pnl/s.initB)})</span></div>
+        <span class="sumv ${cls(A.pnl)}">${fdB(A.pnl, s.tB)} (${fp(A.pnl / s.initB)})</span></div>
     </div>
 
     <div style="margin-top:10px;display:flex;gap:8px;">
@@ -704,15 +877,18 @@ function renderAll() {
       </button>
     </div>
   `;
+  }
 
   // ── PANEL B ──
-  g('panelB').innerHTML = `
+  if (!B.valid) {
+    g('panelB').innerHTML = '<div class="empty"><span>⚠️</span>No se puede calcular. Ajustá el capital a inyectar.</div>';
+  } else {
+    g('panelB').innerHTML = `
     <div style="font-size:9px;color:var(--txt2);line-height:1.8;margin-bottom:10px;
       background:var(--bg2);border:1px solid var(--line);border-radius:7px;padding:10px 12px;">
-      Comprás <strong class="green">${fT(s.B_extraA, s.tA)}</strong> más al precio caído 
-      (<strong class="amber">${fT(s.B_cost_B, s.tB, 2)}</strong>). Con más ${s.tA} total, 
-      el rango puede ser <strong>más estrecho</strong>. Target de salida: 
-      <strong class="gold">${fT(s.B_targetB, s.tB, 2)}</strong> (inicial + inyectado).
+      Inyectás <strong class="gold">${fB(B.injectAmt, s.tB)}</strong>, comprando <strong class="green">${fT(B.extraA, s.tA)}</strong> más al precio caído.
+      Con más ${s.tA} total, el rango puede ser <strong>más estrecho</strong>. Target de salida:
+      <strong class="gold">${fB(B.targetB, s.tB)}</strong> (inicial + inyectado).
     </div>
 
     <div class="ibox">
@@ -720,54 +896,55 @@ function renderAll() {
       <div class="irow">
         <div class="itok"><div class="itok-sym">${s.tA} actual</div>
           <div class="itok-val cyan">${s.curA.toFixed(4)}</div>
-          <div class="itok-usd">${fT(s.curA*s.pNow, s.tB, 2)}</div></div>
+          <div class="itok-usd">${fT(s.curA * s.pNow, s.tB, 2)}</div></div>
         <div class="iop">+</div>
         <div class="itok" style="border-color:var(--green2);">
           <div class="itok-sym">comprar ${s.tA}</div>
-          <div class="itok-val green">${s.B_extraA.toFixed(4)}</div>
-          <div class="itok-usd">${fT(s.B_cost_B, s.tB, 2)}</div></div>
+          <div class="itok-val green">${B.extraA.toFixed(4)}</div>
+          <div class="itok-usd">${fT(B.injectAmt, s.tB, 2)}</div></div>
         <div class="iop">=</div>
         <div class="itok" style="border-color:var(--gold2);">
           <div class="itok-sym">total ${s.tA}</div>
-          <div class="itok-val gold">${s.B_totalA_all.toFixed(4)}</div>
-          <div class="itok-usd">${fT(s.B_totalA_all*s.pNow, s.tB, 2)}</div></div>
+          <div class="itok-val gold">${B.totalA.toFixed(4)}</div>
+          <div class="itok-usd">${fT(B.totalA * s.pNow, s.tB, 2)}</div></div>
       </div>
     </div>
 
-    ${makeRangeViz(s.pNow, s.B_plo, s.B_phi, 'var(--green)')}
+    ${makeRangeViz(s.pNow, B.plo, B.phi, 'var(--green)', s.tB)}
 
     <div class="answer ans-green">
       <div class="answer-ttl" style="color:var(--green);">📐 P_HIGH con rango más estrecho</div>
-      <div class="answer-big green">${fmtP(s.B_phi)}</div>
+      <div class="answer-big green">${fmtP(B.phi, s.tB)}</div>
       <div class="answer-sub">
-        Con más ${s.tA}, P_HIGH es <strong>${fmtP(s.A_phi - s.B_phi)}</strong> más bajo que Estrategia A. 
-        Rango <strong>${s.B_width.toFixed(1)}%</strong> vs <strong>${s.A_width.toFixed(1)}%</strong>. 
-        Salís con <strong>${fT(s.B_exitB, s.tB, 2)}</strong> = inicial + inyectado ✓
+        ${s.A.valid && (s.A.phi - B.phi) > 1e-9
+          ? `Con más ${s.tA}, P_HIGH es <strong>${fmtP(s.A.phi - B.phi, s.tB)}</strong> más bajo que la Estrategia A. Rango <strong>${B.width.toFixed(1)}%</strong> vs <strong>${s.A.width.toFixed(1)}%</strong>.`
+          : `Sin inyección adicional, coincide con la Estrategia A.`}
+        Salís con <strong>${fB(B.exitB, s.tB)}</strong> = inicial + inyectado ✓
       </div>
     </div>
 
     <div class="sg">
       <div class="st"><div class="slb">P_LOW</div>
-        <div class="svl amber">${fmtP(s.B_plo)}</div></div>
-      <div class="st"><div class="slb">P_HIGH (objetivo)</div>
-        <div class="svl green">${fmtP(s.B_phi)}</div>
-        <div class="ssb">${fmtP(s.A_phi-s.B_phi)} menos que A</div></div>
+        <div class="svl amber">${fmtP(B.plo, s.tB)}</div></div>
+      <div class="st"><div class="slb">P_HIGH · punto de recuperación</div>
+        <div class="svl green">${fmtP(B.phi, s.tB)}</div>
+        <div class="ssb">${s.A.valid ? fmtP(Math.max(0, s.A.phi - B.phi), s.tB) + ' menos que A' : '—'}</div></div>
       <div class="st"><div class="slb">Amplitud del rango</div>
-        <div class="svl cyan">${s.B_width.toFixed(1)}%</div>
-        <div class="ssb">más estrecho = más fees</div></div>
+        <div class="svl cyan">${B.width.toFixed(1)}%</div>
+        <div class="ssb">más estrecho = más fees por hora</div></div>
       <div class="st"><div class="slb">Liquidez L</div>
-        <div class="svl cyan">${s.B_L.toFixed(4)}</div>
-        <div class="ssb">vs A: ${s.A_L.toFixed(4)}</div></div>
+        <div class="svl cyan">${B.L.toFixed(4)}</div>
+        <div class="ssb">vs A: ${s.A.valid ? s.A.L.toFixed(4) : '—'}</div></div>
     </div>
 
     <div class="gline"></div>
     <div style="font-size:9px;">
       <div class="sumrow"><span class="sumk">Capital inicial</span><span class="sumv gold">${fT(s.initB, s.tB, 2)}</span></div>
-      <div class="sumrow"><span class="sumk">${s.tA} extra comprado</span><span class="sumv green">${fT(s.B_extraA, s.tA)} = ${fT(s.B_cost_B, s.tB, 2)}</span></div>
-      <div class="sumrow"><span class="sumk">Total a recuperar</span><span class="sumv amber">${fT(s.B_targetB, s.tB, 2)}</span></div>
-      <div class="sumrow"><span class="sumk">${s.tB} al salir por P_HIGH</span><span class="sumv green">${fT(s.B_exitB, s.tB, 2)}</span></div>
+      <div class="sumrow"><span class="sumk">${s.tA} extra comprado</span><span class="sumv green">${fT(B.extraA, s.tA)} = ${fT(B.injectAmt, s.tB, 2)}</span></div>
+      <div class="sumrow"><span class="sumk">Total a recuperar</span><span class="sumv amber">${fT(B.targetB, s.tB, 2)}</span></div>
+      <div class="sumrow"><span class="sumk">${s.tB} al salir por P_HIGH</span><span class="sumv green">${fT(B.exitB, s.tB, 2)}</span></div>
       <div class="sumrow"><span class="sumk">Ganancia neta vs inicial</span>
-        <span class="sumv ${cls(s.B_pnl_net)}">${fd$(s.B_pnl_net)} (${fp(s.B_pnl_net/s.initB)})</span></div>
+        <span class="sumv ${cls(B.pnlNet)}">${fdB(B.pnlNet, s.tB)} (${fp(B.pnlNet / s.initB)})</span></div>
     </div>
 
     <div style="margin-top:10px;display:flex;gap:8px;">
@@ -776,30 +953,40 @@ function renderAll() {
       </button>
     </div>
   `;
+  }
+}
 
-  // ── COMPARATIVA ──
-  const diffPhi   = s.A_phi - s.B_phi;
-  const diffWidth = s.A_width - s.B_width;
+function renderCompare(s) {
+  const A = s.A, B = s.B;
+  if (!A.valid || !B.valid) {
+    g('compareSection').innerHTML = '<div class="empty" style="border:1px solid var(--line);border-radius:12px;padding:24px;"><span>⚠️</span>Ajustá los valores para poder comparar ambas estrategias.</div>';
+    return;
+  }
+
+  const diffPhi = A.phi - B.phi;
+  const diffWidth = A.width - B.width;
+  const improved = diffPhi > 1e-9;
 
   g('compareSection').innerHTML = `
     <div class="verdict">
       <div>
         <div class="vm">
-          Estrategia B tiene P_HIGH <span class="green">${fmtP(diffPhi)} más bajo</span> — 
-          llega al objetivo antes y farmea con rango más estrecho
+          ${improved
+            ? `Estrategia B tiene P_HIGH <span class="green">${fmtP(diffPhi, s.tB)} más bajo</span> — llega al objetivo antes y farmea con rango más estrecho`
+            : `Sin inyección adicional, ambas estrategias son equivalentes`}
         </div>
         <div class="vs">
-          A: P_HIGH = <strong class="amber">${fmtP(s.A_phi)}</strong> · 
-          Amplitud = <strong>${s.A_width.toFixed(1)}%</strong>
+          A: P_HIGH = <strong class="amber">${fmtP(A.phi, s.tB)}</strong> ·
+          Amplitud = <strong>${A.width.toFixed(1)}%</strong>
           &nbsp;|&nbsp;
-          B: P_HIGH = <strong class="green">${fmtP(s.B_phi)}</strong> · 
-          Amplitud = <strong>${s.B_width.toFixed(1)}%</strong>
+          B: P_HIGH = <strong class="green">${fmtP(B.phi, s.tB)}</strong> ·
+          Amplitud = <strong>${B.width.toFixed(1)}%</strong>
           &nbsp;(${diffWidth.toFixed(1)}% más estrecho)
         </div>
       </div>
       <div>
         <div class="vn-lbl">P_HIGH más bajo por</div>
-        <div class="vn-val green">${fmtP(diffPhi)}</div>
+        <div class="vn-val green">${fmtP(Math.max(0, diffPhi), s.tB)}</div>
       </div>
     </div>
 
@@ -813,60 +1000,58 @@ function renderAll() {
           <thead>
             <tr>
               <th>Concepto</th>
-              <th style="text-align:right;color:var(--amber);">A — Sin inyección</th>
-              <th style="text-align:right;color:var(--green);">B — Con inyección (${+g('injectPct').value}% extra)</th>
+              <th style="text-align:right;color:var(--amber);">A — Rebalanceo cero</th>
+              <th style="text-align:right;color:var(--green);">B — Reinyección promediada</th>
               <th style="text-align:right;">Ventaja B</th>
             </tr>
           </thead>
           <tbody>
-            ${tr('Capital inicial',         fT(s.initB,s.tB,2),               fT(s.initB,s.tB,2),             '—')}
-            ${tr(s.tA+' extra comprado',   '—',                                fT(s.B_extraA,s.tA)+'= '+fT(s.B_cost_B,s.tB,2), `<span class="amber">+${fT(s.B_cost_B,s.tB,2)}</span>`)}
-            ${tr('Total a recuperar',       fT(s.initB,s.tB,2),                fT(s.B_targetB,s.tB,2),         `<span class="amber">+${fT(s.B_cost_B,s.tB,2)}</span>`)}
-            ${tr(s.tA+' en posición',       fT(s.A_totalA,s.tA),               fT(s.B_totalA_all,s.tA),        `<span class="green">+${fT(s.B_extraA,s.tA)}</span>`)}
-            ${tr('P_LOW',                   fmtP(s.A_plo),                     fmtP(s.B_plo),                  'igual')}
-            ${tr('P_HIGH calculado',        `<strong class="amber">${fmtP(s.A_phi)}</strong>`, `<strong class="green">${fmtP(s.B_phi)}</strong>`, `<span class="green">−${fmtP(diffPhi)} más bajo</span>`)}
-            ${tr('Amplitud del rango',      s.A_width.toFixed(1)+'%',          s.B_width.toFixed(1)+'%',       `<span class="green">−${diffWidth.toFixed(1)}% (más estrecho)</span>`)}
-            ${tr('Liquidez L',              s.A_L.toFixed(4),                  s.B_L.toFixed(4),               `<span class="${cls(s.B_L-s.A_L)}">${s.B_L>s.A_L?'+':''}${(s.B_L-s.A_L).toFixed(4)}</span>`)}
-            ${tr(s.tB+' al salir',          `<strong class="green">${fT(s.A_exitB,s.tB,2)}</strong>`,`<strong class="green">${fT(s.B_exitB,s.tB,2)}</strong>`,'—')}
-            ${tr('Ganancia neta vs inicial',`<span class="${cls(s.A_pnl)}">${fd$(s.A_pnl)} (${fp(s.A_pnl/s.initB)})</span>`,`<span class="${cls(s.B_pnl_net)}">${fd$(s.B_pnl_net)} (${fp(s.B_pnl_net/s.initB)})</span>`,'—')}
+            ${tr('Capital inicial', fT(s.initB, s.tB, 2), fT(s.initB, s.tB, 2), '—')}
+            ${tr(s.tA + ' extra comprado', '—', fT(B.extraA, s.tA) + ' = ' + fT(B.injectAmt, s.tB, 2), `<span class="amber">+${fT(B.injectAmt, s.tB, 2)}</span>`)}
+            ${tr('Total a recuperar', fT(s.initB, s.tB, 2), fT(B.targetB, s.tB, 2), `<span class="amber">+${fT(B.injectAmt, s.tB, 2)}</span>`)}
+            ${tr(s.tA + ' en posición', fT(A.totalA, s.tA), fT(B.totalA, s.tA), `<span class="green">+${fT(B.extraA, s.tA)}</span>`)}
+            ${tr('P_LOW', fmtP(A.plo, s.tB), fmtP(B.plo, s.tB), 'igual')}
+            ${tr('P_HIGH calculado', `<strong class="amber">${fmtP(A.phi, s.tB)}</strong>`, `<strong class="green">${fmtP(B.phi, s.tB)}</strong>`, improved ? `<span class="green">−${fmtP(diffPhi, s.tB)} más bajo</span>` : 'igual')}
+            ${tr('Amplitud del rango', A.width.toFixed(1) + '%', B.width.toFixed(1) + '%', improved ? `<span class="green">−${diffWidth.toFixed(1)}% (más estrecho)</span>` : 'igual')}
+            ${tr('Liquidez L', A.L.toFixed(4), B.L.toFixed(4), `<span class="${cls(B.L - A.L)}">${B.L > A.L ? '+' : ''}${(B.L - A.L).toFixed(4)}</span>`)}
+            ${tr(s.tB + ' al salir', `<strong class="green">${fT(A.exitB, s.tB, 2)}</strong>`, `<strong class="green">${fT(B.exitB, s.tB, 2)}</strong>`, '—')}
+            ${tr('Ganancia neta vs inicial', `<span class="${cls(A.pnl)}">${fdB(A.pnl, s.tB)} (${fp(A.pnl / s.initB)})</span>`, `<span class="${cls(B.pnlNet)}">${fdB(B.pnlNet, s.tB)} (${fp(B.pnlNet / s.initB)})</span>`, '—')}
           </tbody>
         </table>
       </div>
     </div>
   `;
-  g('predictSection').innerHTML = makePredictSection(s);
 }
 
-function predictStep(plo) {
-  if (plo < 2500) return 100;
-  if (plo < 5000) return 200;
-  return 300;
-}
+// ── PROYECCIÓN PREDICTIVA ──
+// Steps are a percentage of P_LOW, not a fixed currency amount, so this
+// scales correctly whether the pair trades in the thousands (BTC/USDC) or
+// in fractions of a cent (a low-price altcoin).
+const PREDICT_STEP_PCT = 0.05; // 5% per tramo
 
 function makePredictSection(s) {
-  const step = predictStep(s.plo0);
   const scenarios = [];
   for (let i = 1; i <= 4; i++) {
-    const price = s.plo0 - step * i;
+    const price = s.plo0 * (1 - PREDICT_STEP_PCT * i);
     if (price <= 0) break;
-    scenarios.push(makePredictScenario(s, price, i, step));
+    scenarios.push(makePredictScenario(s, price, i));
   }
   if (!scenarios.length) {
     return `<div class="card"><div class="empty"><span>📉</span>No hay escenarios de caída disponibles para el rango actual.</div></div>`;
   }
   const rows = scenarios.map(row => `
       <tr>
-        <td><strong>${row.label}</strong><div class="sub">Caída de ${f$(row.diff,0,'')} respecto a P_LOW</div></td>
-        <td><strong>${fmtP(row.A_phi)}</strong><div class="sub">P_HIGH break-even</div></td>
-        <td><strong>${f$(row.B_inject,2,'')}</strong><div class="sub">USD a inyectar</div></td>
-        <td><strong>${fmtP(row.B_plo)} → ${fmtP(row.B_phi)}</strong><div class="sub">Mismo ancho % que el rango original</div></td>
+        <td><strong>${row.label}</strong><div class="sub">${(PREDICT_STEP_PCT * row.i * 100).toFixed(0)}% bajo P_LOW</div></td>
+        <td><strong>${fmtP(row.A_phi, s.tB)}</strong><div class="sub">P_HIGH break-even (Estrategia A)</div></td>
+        <td><strong>${fB(row.B_inject, s.tB)}</strong><div class="sub">capital a inyectar (Estrategia B)</div></td>
+        <td><strong>${fmtP(row.B_plo, s.tB)} → ${fmtP(row.B_phi, s.tB)}</strong><div class="sub">mismo ancho % que el rango original</div></td>
       </tr>`).join('');
   return `
     <div class="card predict-card">
       <div class="predict-header">
         <div>
           <div class="predict-title">Proyección Predictiva Automatizada</div>
-          <div class="predict-sub">Escenarios de caída por tramos de ${f$(step,0,'')} ${s.tB} bajo P_LOW.</div>
+          <div class="predict-sub">Escenarios de caída en tramos de ${(PREDICT_STEP_PCT * 100).toFixed(0)}% bajo P_LOW (${fmtP(s.plo0, s.tB)}) — proporcional al precio del par, no un monto fijo.</div>
         </div>
         <div class="predict-badge">Estrategias A / B</div>
       </div>
@@ -875,8 +1060,8 @@ function makePredictSection(s) {
           <thead>
             <tr>
               <th>Escenario</th>
-              <th>P_HIGH Sin inyección</th>
-              <th>Inyección USD</th>
+              <th>P_HIGH sin inyección</th>
+              <th>Inyección sugerida</th>
               <th>Nuevos límites</th>
             </tr>
           </thead>
@@ -887,11 +1072,9 @@ function makePredictSection(s) {
     </div>`;
 }
 
-function makePredictScenario(s, price, index, step) {
+function makePredictScenario(s, price, i) {
   const raw = amountsAt(s.L0, price, s.plo0, s.phi0);
-  const curA = raw.a;
-  const curB = raw.b;
-  const totalA = curA + (curB / price || 0);
+  const totalA = raw.a + (raw.b / price || 0);
   const A_phi = solvePhiFullA(totalA, price, s.initB);
   const widthRatio = (s.phi0 - s.plo0) / s.plo0;
   const B_plo = price;
@@ -899,18 +1082,12 @@ function makePredictScenario(s, price, index, step) {
   const neededA = s.initB / (Math.sqrt(price) * Math.sqrt(B_phi));
   const B_inject = Math.max(0, (neededA - totalA) * price);
   return {
-    label: `${index}° tramo: ${fmtP(price)} (${step>0?'-'+f$(step*index,0,''):''})`,
-    diff: s.plo0 - price,
-    A_phi: A_phi || 0,
-    B_inject,
-    B_plo,
-    B_phi,
-    widthRatio,
-    totalA,
+    i, label: `${i}° tramo: ${fmtP(price, s.tB)}`,
+    A_phi: A_phi || 0, B_inject, B_plo, B_phi,
   };
 }
 
-function tr(label, a, b, d='—') {
+function tr(label, a, b, d = '—') {
   return `<tr>
     <td class="ck">${label}</td>
     <td class="cv">${a}</td>
@@ -921,20 +1098,18 @@ function tr(label, a, b, d='—') {
 
 // ── HISTORY ──
 function addToHistory(which) {
-  if (!S.initB) return;
+  if (!S.initB || !S.exitedLow) return;
+  const strat = which === 'A' ? S.A : S.B;
+  if (!strat || !strat.valid) return;
   const snap = {
-    n: history.length+1,
-    which,
-    capital: S.initB,
-    pNow: S.pNow,
-    plo:  which==='A' ? S.A_plo : S.B_plo,
-    phi:  which==='A' ? S.A_phi : S.B_phi,
-    L:    which==='A' ? S.A_L   : S.B_L,
-    exitB: which==='A' ? S.A_exitB : S.B_exitB,
-    totalA: which==='A' ? S.A_totalA : S.B_totalA_all,
-    injected: which==='B' ? S.B_cost_B : 0,
-    target: which==='A' ? S.initB : S.B_targetB,
-    width: which==='A' ? S.A_width : S.B_width,
+    n: history.length + 1, which,
+    capital: S.initB, pNow: S.pNow,
+    plo: strat.plo, phi: strat.phi, L: strat.L,
+    exitB: strat.exitB,
+    totalA: strat.totalA,
+    injected: which === 'B' ? strat.injectAmt : 0,
+    target: which === 'A' ? S.initB : strat.targetB,
+    width: strat.width,
     tA: S.tA, tB: S.tB,
   };
   history.push(snap);
@@ -951,13 +1126,13 @@ function renderHistory() {
   }
   let html = '<div class="history">';
   history.forEach((h, i) => {
-    const color = h.which==='A' ? 'var(--amber)' : 'var(--green)';
-    const label = h.which==='A' ? 'Sin inyección' : 'Con inyección';
+    const color = h.which === 'A' ? 'var(--amber)' : 'var(--green)';
+    const label = h.which === 'A' ? 'Rebalanceo cero' : 'Reinyección promediada';
     html += `<div class="hist-item" onclick="loadSnapshot(${i})">
       <div class="hist-n">#${h.n} — ${label}</div>
-      <div class="hist-v" style="color:${color};">P_HIGH = ${fmtP(h.phi)}</div>
-      <div class="hist-s">${fmtP(h.plo)} → ${fmtP(h.phi)} · ${h.width.toFixed(1)}%</div>
-      <div class="hist-s" style="color:var(--txt3);">Entrada a ${fmtP(h.pNow)}</div>
+      <div class="hist-v" style="color:${color};">P_HIGH = ${fmtP(h.phi, h.tB)}</div>
+      <div class="hist-s">${fmtP(h.plo, h.tB)} → ${fmtP(h.phi, h.tB)} · ${h.width.toFixed(1)}%</div>
+      <div class="hist-s" style="color:var(--txt3);">Entrada a ${fmtP(h.pNow, h.tB)}</div>
     </div>`;
   });
   html += `<div class="hist-item" style="cursor:pointer;border-color:var(--red2);color:var(--red);" onclick="clearHistory()">
@@ -972,20 +1147,20 @@ function loadSnapshot(i) {
   const h = history[i];
   g('iCapital').value = h.capital;
   g('iP0').value = h.pNow;
-  g('iPLo').value = h.plo.toFixed(4);
-  g('iPHi').value = h.phi.toFixed(4);
+  g('iPLo').value = h.plo.toFixed(6);
+  g('iPHi').value = h.phi.toFixed(6);
   g('iPNow').value = h.pNow;
   onInput();
   run();
-  window.scrollTo({top:0,behavior:'smooth'});
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function clearHistory() { history=[]; renderHistory(); }
+function clearHistory() { history = []; renderHistory(); }
 
 function reset() {
-  [['iCapital',5000],['iP0',2500],['iPLo',2000],['iPHi',3000],
-   ['iPNow',1500],['injectPct',50]].forEach(([id,v])=>g(id).value=v);
-  history=[];
+  [['iTokA', 'ETH'], ['iTokB', 'USDC'], ['iCapital', 5000], ['iP0', 2500], ['iPLo', 2000], ['iPHi', 3000],
+   ['iPNow', 1500], ['iInjectAmt', 1600], ['injectPct', 50]].forEach(([id, v]) => g(id).value = v);
+  history = [];
   updateSlider(g('injectPct'));
   onInput(); run();
 }
