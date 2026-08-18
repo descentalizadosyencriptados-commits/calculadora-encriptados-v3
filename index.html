@@ -30,7 +30,7 @@ body{background:var(--bg);color:var(--txt);font-family:var(--mono);min-height:10
 .top{display:flex;align-items:center;justify-content:space-between;
   padding:12px 24px;border-bottom:1px solid var(--line);
   background:rgba(6,8,16,.96);backdrop-filter:blur(24px);
-  position:sticky;top:0;z-index:400;}
+  position:sticky;top:0;z-index:400;flex-wrap:wrap;gap:8px;}
 .brand{display:flex;align-items:center;gap:10px;}
 .bmark{width:30px;height:30px;border-radius:7px;
   background:linear-gradient(135deg,var(--gold),var(--cyan));
@@ -38,7 +38,7 @@ body{background:var(--bg);color:var(--txt);font-family:var(--mono);min-height:10
 .bname{font-family:var(--head);font-size:13px;font-weight:700;}
 .bname em{color:var(--cyan);font-style:normal;}
 .btag{font-size:7px;color:var(--txt2);letter-spacing:2px;margin-top:1px;}
-.pills{display:flex;gap:8px;align-items:center;}
+.pills{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .pill{display:inline-flex;align-items:center;gap:4px;
   font-size:8px;letter-spacing:1px;padding:3px 8px;
   border-radius:20px;border:1px solid;}
@@ -46,6 +46,9 @@ body{background:var(--bg);color:var(--txt);font-family:var(--mono);min-height:10
 .pill-g{color:var(--green);border-color:var(--green2);background:var(--greenbg);}
 .pill-r{color:var(--red);border-color:var(--red2);background:var(--redbg);}
 .pill-a{color:var(--amber);border-color:var(--amber2);background:var(--amberbg);}
+.pill-brand{color:var(--txt2);border-color:var(--line2);background:var(--bg2);letter-spacing:.5px;}
+.pill-brand strong{color:var(--gold);font-weight:700;}
+.pill-brand strong+strong{color:var(--cyan);}
 .dot{width:4px;height:4px;border-radius:50%;background:currentColor;}
 
 /* ── LAYOUT ── */
@@ -90,7 +93,7 @@ select{cursor:pointer;}
 /* ── BUTTONS ── */
 .btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;
   border-radius:7px;border:none;cursor:pointer;font-family:var(--mono);
-  font-size:10px;font-weight:600;transition:all .15s;letter-spacing:.3px;}
+  font-size:10px;font-weight:600;transition:all .15s;letter-spacing:.3px;text-decoration:none;}
 .btn-gold{background:linear-gradient(135deg,var(--gold),#B07010);color:#060810;
   box-shadow:0 3px 14px rgba(242,193,78,.18);}
 .btn-gold:hover{box-shadow:0 5px 20px rgba(242,193,78,.32);transform:translateY(-1px);}
@@ -174,18 +177,59 @@ select{cursor:pointer;}
 .ctable .cv{font-weight:600;text-align:right;}
 .ctable .cd{text-align:right;font-size:9px;}
 
-.predict-card{background:linear-gradient(180deg,rgba(6,8,16,.95),rgba(9,14,26,.98));border:1px solid rgba(0,207,255,.18);border-radius:14px;overflow:hidden;margin-bottom:16px;}
-.predict-header{padding:14px 16px;border-bottom:1px solid rgba(26,37,64,.5);display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.predict-title{font-family:var(--head);font-size:11px;font-weight:700;color:var(--cyan);}
-.predict-sub{font-size:8px;color:var(--txt2);line-height:1.5;max-width:56ch;}
-.predict-table{width:100%;border-collapse:collapse;}
-.predict-table th,.predict-table td{padding:12px 14px;border-bottom:1px solid rgba(26,37,64,.4);font-size:10px;text-align:left;}
-.predict-table th{background:rgba(0,207,255,.06);color:var(--txt2);text-transform:uppercase;letter-spacing:1.3px;font-size:8px;}
-.predict-table td{background:rgba(255,255,255,.02);}
-.predict-table tr:nth-child(odd) td{background:rgba(0,207,255,.02);}
-.predict-table td strong{display:block;font-weight:700;color:var(--txt);}
-.predict-table td .sub{font-size:8px;color:var(--txt2);margin-top:3px;}
-.predict-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:8px;background:rgba(0,207,255,.12);color:var(--cyan);border:1px solid rgba(0,207,255,.18);}
+/* ── MATRIZ PREDICTIVA ── */
+.matrix-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:11px;}
+.matrix-card{background:var(--bg2);border:1px solid var(--line2);border-radius:10px;padding:12px;cursor:pointer;
+  transition:all .18s;position:relative;}
+.matrix-card:hover{border-color:var(--amber2);box-shadow:0 0 0 1px var(--amber2),0 6px 20px rgba(255,176,32,.12);transform:translateY(-2px);}
+.matrix-card.active{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan),0 0 22px rgba(0,207,255,.28);background:rgba(0,207,255,.05);}
+.mc-lvl{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;color:var(--red);
+  background:var(--redbg);border:1px solid var(--red2);border-radius:20px;padding:2px 8px;margin-bottom:7px;}
+.mc-price{font-family:var(--head);font-size:16px;font-weight:900;color:var(--txt);margin-bottom:2px;}
+.mc-hint{font-size:8px;color:var(--txt2);margin-bottom:9px;}
+.mc-row{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 0;
+  border-top:1px solid rgba(26,37,64,.5);font-size:9px;}
+.mc-lbl{color:var(--txt2);display:flex;align-items:center;gap:4px;}
+.mc-val{font-weight:700;}
+.mc-locked{cursor:pointer;}
+.mc-locked:hover .mc-lbl{color:var(--cyan);}
+.lock-ic{font-size:8px;}
+.blur-locked{filter:blur(4px);user-select:none;}
+.mc-cta{margin-top:9px;font-size:8px;color:var(--txt3);text-align:center;letter-spacing:.5px;text-transform:uppercase;}
+.matrix-card.active .mc-cta{color:var(--cyan);font-weight:700;}
+
+/* ── LOCKED / GATING OVERLAY ── */
+.locked-wrap{position:relative;}
+.locked-blur{filter:blur(7px);pointer-events:none;user-select:none;opacity:.75;}
+.locked-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:7px;background:rgba(6,8,16,.6);border-radius:10px;text-align:center;padding:20px 16px;}
+.locked-ic{font-size:26px;filter:drop-shadow(0 0 10px var(--gold));}
+.locked-ttl{font-family:var(--head);font-size:12px;font-weight:700;color:var(--gold);}
+.locked-sub{font-size:9px;color:var(--txt2);max-width:32ch;line-height:1.5;}
+
+/* ── PDF CTA BANNER ── */
+.pdf-cta{background:linear-gradient(135deg,rgba(242,193,78,.08),rgba(0,207,255,.06));border:1px solid var(--gold2);}
+.pdf-cta-inner{padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+.pdf-cta-ttl{font-family:var(--head);font-size:13px;font-weight:700;color:var(--gold);}
+.pdf-cta-sub{font-size:9px;color:var(--txt2);margin-top:3px;}
+
+/* ── GATE MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(3,4,8,.82);backdrop-filter:blur(6px);
+  z-index:900;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal-box{position:relative;max-width:420px;width:100%;background:linear-gradient(180deg,var(--bg1),var(--bg2));
+  border:1px solid var(--cyan2);border-radius:16px;padding:28px 24px 24px;text-align:center;
+  box-shadow:0 0 0 1px rgba(0,207,255,.15),0 0 60px rgba(0,207,255,.15),0 0 90px rgba(242,193,78,.08);}
+.modal-close{position:absolute;top:12px;right:14px;background:transparent;border:none;color:var(--txt2);
+  font-size:14px;cursor:pointer;line-height:1;padding:4px;}
+.modal-close:hover{color:var(--txt);}
+.modal-badge{display:inline-flex;align-items:center;gap:6px;font-size:8px;letter-spacing:1.5px;
+  padding:4px 12px;border-radius:20px;background:var(--goldbg);border:1px solid var(--gold2);color:var(--gold);
+  margin-bottom:14px;}
+.modal-title{font-family:var(--head);font-size:15px;font-weight:700;line-height:1.5;color:var(--txt);margin-bottom:8px;}
+.modal-sub{font-size:10px;color:var(--txt2);line-height:1.6;margin-bottom:20px;}
+.modal-actions{display:flex;flex-direction:column;gap:9px;}
+.modal-actions .btn{justify-content:center;padding:11px 16px;font-size:11px;}
 
 /* ── VERDICT ── */
 .verdict{background:linear-gradient(135deg,rgba(0,240,128,.05),rgba(0,207,255,.05));
@@ -245,6 +289,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   <div class="pills">
     <span class="pill pill-c"><span class="dot"></span>CUALQUIER PAR</span>
     <span id="hdrPill" class="pill pill-r"><span class="dot"></span>—</span>
+    <span class="pill pill-brand">⚡ Powered by <strong>Encriptados</strong> &amp; <strong>Smarty Profit</strong></span>
   </div>
 </div>
 
@@ -311,7 +356,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <div style="font-size:7px;color:var(--txt2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;">
       PRECIO ACTUAL <span id="pairLabel" style="color:var(--cyan);">ETH/USDC</span>
     </div>
-    <input type="number" id="iPNow" value="1500" step="1" min="0.000001" oninput="run()">
+    <input type="number" id="iPNow" value="1500" step="1" min="0.000001" oninput="onPNowInput()">
   </div>
   <div style="color:var(--txt3);font-size:18px;flex-shrink:0;">→</div>
   <div style="flex:1;min-width:180px;">
@@ -323,6 +368,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 <!-- ESTADO ACTUAL -->
 <div class="sec">Estado & impermanent loss</div>
 <div id="statusSection"></div>
+
+<!-- MATRIZ PREDICTIVA -->
+<div class="sec">Matriz Predictiva de Contingencia</div>
+<div id="matrixSection"></div>
 
 <!-- REBALANCE HISTORY -->
 <div class="sec">Historial de rebalanceos</div>
@@ -340,13 +389,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 <div class="card" style="margin-bottom:13px;">
   <div class="ch">
     <div class="ci ci-gr">⊕</div>
-    <div class="ct" style="color:var(--green);">Control de reinyección (Estrategia B — promediado)</div>
+    <div class="ct" style="color:var(--green);">Simulador directo de reinyección (Estrategia B)</div>
     <div class="cs">Capital adicional que aportás al precio caído para promediar la entrada y recuperarlo junto al capital inicial</div>
   </div>
   <div class="cb">
     <div class="irow" style="margin-bottom:4px;">
       <div style="flex:1;min-width:170px;">
-        <div class="ilbl">Capital adicional a inyectar <span id="injectAmtLbl" class="ihint">(en Token B)</span></div>
+        <div class="ilbl">Capital adicional disponible para reinyectar <span id="injectAmtLbl" class="ihint">($)</span></div>
         <input type="number" id="iInjectAmt" value="1600" step="10" min="0" oninput="onInjectAmtInput(this)">
       </div>
       <div style="flex:1;min-width:170px;">
@@ -390,14 +439,38 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
 <!-- ④ COMPARATIVA -->
 <div class="sec">④ Comparativa final</div>
-<div id="predictSection"></div>
 <div id="compareSection">
   <div class="empty" style="border:1px solid var(--line);border-radius:12px;padding:24px;">
     <span>⚖</span>Simulá para ver la comparativa
   </div>
 </div>
 
+<!-- PDF EXPORT CTA -->
+<div class="card pdf-cta">
+  <div class="pdf-cta-inner">
+    <div>
+      <div class="pdf-cta-ttl">📄 Exportá tu Plan de Contingencia en PDF</div>
+      <div class="pdf-cta-sub">Llevate el análisis completo de ambas estrategias, listo para ejecutar.</div>
+    </div>
+    <button class="btn btn-gold" onclick="openGate()">🔓 Exportar en PDF</button>
+  </div>
+</div>
+
 </div><!-- /wrap -->
+
+<!-- GATE MODAL -->
+<div id="gateModal" class="modal-overlay" onclick="if(event.target===this) closeGate()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeGate()" aria-label="Cerrar">✕</button>
+    <div class="modal-badge">🔓 CONTENIDO PREMIUM</div>
+    <div class="modal-title">Desbloqueá las Estrategias Avanzadas de Reinyección<br>y exportá tu plan en PDF</div>
+    <div class="modal-sub">con la metodología de <strong class="gold">Smarty Profit</strong> &amp; <strong class="cyan">Encriptados Academy</strong></div>
+    <div class="modal-actions">
+      <a class="btn btn-gold" id="ctaCommunity" href="#" target="_blank" rel="noopener">🚀 Unirme a la Comunidad</a>
+      <a class="btn btn-ghost" id="ctaSupport" href="#" target="_blank" rel="noopener">💬 Hablar con Soporte</a>
+    </div>
+  </div>
+</div>
 
 <script>
 // ══════════════════════════════════════════════════════════════════
@@ -407,6 +480,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 // Every strategy is derived purely from P, P_LOW, P_HIGH and amounts —
 // no token symbol is ever assumed, so the same math works for
 // ETH/USDC, BTC/ETH, MATIC/DAI, or any other pair.
+// This block is untouched from the verified backend — the v2 commercial
+// features below (matrix, gating, branding) only consume it, never
+// re-derive it.
 // ══════════════════════════════════════════════════════════════════
 const sq = x => Math.sqrt(Math.max(0, x));
 
@@ -458,6 +534,44 @@ function solvePhiFullA(amtA_total, plo, targetB) {
 // differences). 0.5% is a display/UX choice, not part of the recovery math.
 const ENTRY_BUFFER = 0.005;
 
+// Pure function: given a HYPOTHETICAL current price pHyp (either the real
+// live P_NOW, or a what-if scenario from the predictive matrix), the
+// original position parameters, and how much extra capital would be
+// reinjected, returns the exact Strategy A (Rebalanceo Cero) and
+// Strategy B (Reinyección Promediada) outcomes. Both the live panels and
+// every Matriz Predictiva card call this SAME function, so there is only
+// one implementation of the recovery math to keep correct.
+function computeStrategyAt(pHyp, plo0, phi0, L0, initB, injectAmt) {
+  const raw = amountsAt(L0, pHyp, plo0, phi0);
+  const curA = raw.a, curB = raw.b;
+  const totalA0 = curA + (pHyp > 0 ? curB / pHyp : 0);
+  const plo = pHyp * (1 + ENTRY_BUFFER);
+
+  const A_phi = solvePhiFullA(totalA0, plo, initB);
+  let A = { valid: false };
+  if (A_phi && A_phi > plo) {
+    const L = calcLfullA(totalA0, plo, A_phi);
+    const exitB = L * (sq(A_phi) - sq(plo));
+    A = { valid: true, totalA: totalA0, plo, phi: A_phi, L, exitB, width: (A_phi - plo) / plo * 100, pnl: exitB - initB };
+  }
+
+  const extraA = injectAmt > 0 && pHyp > 0 ? injectAmt / pHyp : 0;
+  const totalA1 = totalA0 + extraA;
+  const targetB = initB + injectAmt;
+  const B_phi = solvePhiFullA(totalA1, plo, targetB);
+  let B = { valid: false, injectAmt, extraA };
+  if (B_phi && B_phi > plo) {
+    const L = calcLfullA(totalA1, plo, B_phi);
+    const exitB = L * (sq(B_phi) - sq(plo));
+    B = {
+      valid: true, injectAmt, extraA, totalA: totalA1, plo, phi: B_phi, L, exitB,
+      width: (B_phi - plo) / plo * 100, pnlVsTarget: exitB - targetB, pnlNet: exitB - initB, targetB,
+    };
+  }
+
+  return { curA, curB, plo, A, B };
+}
+
 // ══ FORMAT ══
 const fT = (n, sym, d = 4) => {
   if (isNaN(n) || n === null || n === undefined) return '—';
@@ -495,7 +609,10 @@ function fmtP(p, tB) {
 
 // ══ STATE ══
 let S = {};
-let history = []; // array of rebalance snapshots
+let history = [];              // array of rebalance snapshots
+let selectedScenarioIdx = null; // which Matriz Predictiva card is active
+let matrixScenarios = [];       // scenarios backing the current matrix render
+let unlocked = false;           // demo-local flag (gate always re-prompts by design)
 
 function tokA() { const v = (g('iTokA').value || '').trim().toUpperCase(); return v || 'TOKEN A'; }
 function tokB() { const v = (g('iTokB').value || '').trim().toUpperCase(); return v || 'TOKEN B'; }
@@ -542,7 +659,7 @@ function updateSlider(el) {
 
 // Quick-select helper: slider drives the amount field (using the last
 // computed Token A balance), the amount field is the value actually used
-// by the math in computeRebalanceStrategies().
+// by the math in computeStrategyAt().
 function onInjectPctInput(el) {
   updateSlider(el);
   const base = (S.curA || 0) * (S.pNow || +g('iPNow').value || 0);
@@ -559,6 +676,12 @@ function onInjectAmtInput(el) {
   run();
 }
 
+// Manual price edits break the "this matches a matrix scenario" link.
+function onPNowInput() {
+  selectedScenarioIdx = null;
+  run();
+}
+
 function run() {
   const capital = +g('iCapital').value;
   const p0 = +g('iP0').value;
@@ -570,10 +693,10 @@ function run() {
 
   if (!capital || !p0 || !plo0 || !phi0 || plo0 >= phi0 || pNow <= 0 || p0 <= plo0 || p0 >= phi0) {
     g('statusSection').innerHTML = '';
+    g('matrixSection').innerHTML = '';
     g('panelA').innerHTML = '<div class="empty"><span>📐</span>Completá "Configuración del par" con valores válidos.</div>';
     g('panelB').innerHTML = '<div class="empty"><span>💉</span>Completá "Configuración del par" con valores válidos.</div>';
     g('compareSection').innerHTML = '<div class="empty" style="border:1px solid var(--line);border-radius:12px;padding:24px;"><span>⚖</span>Simulá para ver la comparativa</div>';
-    g('predictSection').innerHTML = '';
     return;
   }
 
@@ -607,7 +730,9 @@ function run() {
 
   // The recovery formulas (calcLfullA / solvePhiFullA) are only valid for
   // a position deposited 100% in Token A, i.e. exactly the exited-low
-  // case. We deliberately do NOT reuse them outside that domain.
+  // case. We deliberately do NOT reuse them outside that domain for the
+  // LIVE panels (the Matriz Predictiva below stays valid regardless,
+  // since every scenario it generates is itself a below-P_LOW price).
   if (exitedLow) computeRebalanceStrategies();
 
   renderAll();
@@ -616,46 +741,12 @@ function run() {
 function computeRebalanceStrategies() {
   const s = S;
   const injectAmt = Math.max(0, +g('iInjectAmt').value || 0);
-
-  // ── Strategy A: Rebalanceo Cero (no injection) ──
-  // curB is guaranteed 0 here (exitedLow ⇒ 100% Token A already).
-  const A_totalA = s.curA;
-  const A_plo = s.pNow * (1 + ENTRY_BUFFER);
-  const A_phi = solvePhiFullA(A_totalA, A_plo, s.initB);
-  let A = { valid: false };
-  if (A_phi && A_phi > A_plo) {
-    const A_L = calcLfullA(A_totalA, A_plo, A_phi);
-    const A_exitB = A_L * (sq(A_phi) - sq(A_plo));
-    A = {
-      valid: true, totalA: A_totalA, plo: A_plo, phi: A_phi, L: A_L,
-      exitB: A_exitB, width: (A_phi - A_plo) / A_plo * 100, pnl: A_exitB - s.initB,
-    };
-  }
-
-  // ── Strategy B: Reinyección Promediada ──
-  // Same entry floor as A; buying more Token A now raises totalA, which
-  // lets the same targetB be reached at a LOWER, narrower P_HIGH.
-  const B_extraA = s.pNow > 0 ? injectAmt / s.pNow : 0;
-  const B_totalA = s.curA + B_extraA;
-  const B_plo = A_plo;
-  const B_targetB = s.initB + injectAmt; // recover initial + injected
-  const B_phi = solvePhiFullA(B_totalA, B_plo, B_targetB);
-  let B = { valid: false, injectAmt, extraA: B_extraA };
-  if (B_phi && B_phi > B_plo) {
-    const B_L = calcLfullA(B_totalA, B_plo, B_phi);
-    const B_exitB = B_L * (sq(B_phi) - sq(B_plo));
-    B = {
-      valid: true, injectAmt, extraA: B_extraA, totalA: B_totalA, plo: B_plo, phi: B_phi, L: B_L,
-      exitB: B_exitB, width: (B_phi - B_plo) / B_plo * 100,
-      pnlVsTarget: B_exitB - B_targetB, pnlNet: B_exitB - s.initB, targetB: B_targetB,
-    };
-  }
-
-  S.A = A;
-  S.B = B;
+  const r = computeStrategyAt(s.pNow, s.plo0, s.phi0, s.L0, s.initB, injectAmt);
+  S.A = r.A;
+  S.B = r.B;
 
   g('injectPreview').innerHTML = injectAmt > 0
-    ? `Comprás <strong class="green">${fT(B_extraA, s.tA)}</strong> = <strong>${fB(injectAmt, s.tB)}</strong> al precio ${fmtP(s.pNow, s.tB)} · Total ${s.tA} en posición: <strong class="cyan">${fT(B_totalA, s.tA)}</strong>`
+    ? `Comprás <strong class="green">${fT(r.B.extraA, s.tA)}</strong> = <strong>${fB(injectAmt, s.tB)}</strong> al precio ${fmtP(s.pNow, s.tB)} · Total ${s.tA} en posición: <strong class="cyan">${fT(r.B.totalA, s.tA)}</strong>`
     : `Sin inyección adicional, la Estrategia B coincide exactamente con la Estrategia A.`;
 }
 
@@ -692,19 +783,17 @@ function renderAll() {
 
   renderSituation(s);
   renderStatusCard(s);
+  g('matrixSection').innerHTML = makeMatrixSection(s);
 
   if (s.exitedLow) {
     renderStrategyPanels(s);
     renderCompare(s);
-    g('predictSection').innerHTML = makePredictSection(s);
   } else if (s.exitedHigh) {
     renderExitedHighPanels(s);
     g('compareSection').innerHTML = '<div class="empty" style="border:1px solid var(--line);border-radius:12px;padding:24px;"><span>⚖</span>La comparativa A/B se activa cuando el precio cae bajo P_LOW.</div>';
-    g('predictSection').innerHTML = '';
   } else {
     renderInRangePanels(s);
     g('compareSection').innerHTML = '<div class="empty" style="border:1px solid var(--line);border-radius:12px;padding:24px;"><span>⚖</span>La comparativa A/B se activa cuando el precio cae bajo P_LOW.</div>';
-    g('predictSection').innerHTML = '';
   }
 
   renderHistory();
@@ -774,8 +863,76 @@ function renderStatusCard(s) {
     </div>`;
 }
 
+// ── MATRIZ PREDICTIVA DE CONTINGENCIA ──
+// Levels are a percentage of P_LOW (not a fixed currency amount), so this
+// scales correctly whether the pair trades in the thousands (BTC/USDC) or
+// in fractions of a cent (a low-price altcoin). Generated straight from
+// computeStrategyAt(), so it is always in sync with the live math.
+const MATRIX_STEP_PCT = 0.05; // 5% per nivel
+const MATRIX_LEVELS = 4;
+
+function makeMatrixSection(s) {
+  const injectAmt = Math.max(0, +g('iInjectAmt').value || 0);
+  matrixScenarios = [];
+  for (let i = 1; i <= MATRIX_LEVELS; i++) {
+    const pct = MATRIX_STEP_PCT * i;
+    const price = s.plo0 * (1 - pct);
+    if (price <= 0) break;
+    const r = computeStrategyAt(price, s.plo0, s.phi0, s.L0, s.initB, injectAmt);
+    matrixScenarios.push({ idx: matrixScenarios.length, price, pct, r });
+  }
+  if (!matrixScenarios.length) {
+    return `<div class="card"><div class="empty"><span>📉</span>No hay niveles de caída disponibles para este rango.</div></div>`;
+  }
+
+  const cards = matrixScenarios.map(sc => {
+    const active = sc.idx === selectedScenarioIdx ? ' active' : '';
+    const aTxt = sc.r.A.valid ? fmtP(sc.r.A.phi, s.tB) : '—';
+    const bTxt = sc.r.B.valid ? fmtP(sc.r.B.phi, s.tB) : '—';
+    return `
+      <div class="matrix-card${active}" onclick="selectScenario(${sc.idx})">
+        <div class="mc-lvl">-${(sc.pct * 100).toFixed(0)}%</div>
+        <div class="mc-price">${fmtP(sc.price, s.tB)}</div>
+        <div class="mc-hint">${s.tA} cae a ${fmtP(sc.price, s.tB)}</div>
+        <div class="mc-row">
+          <span class="mc-lbl">🎯 P_HIGH · Rebalanceo Cero</span>
+          <span class="mc-val amber">${aTxt}</span>
+        </div>
+        <div class="mc-row mc-locked" onclick="event.stopPropagation();openGate()">
+          <span class="mc-lbl">⚡ P_HIGH · Reinyección <span class="lock-ic">🔒</span></span>
+          <span class="mc-val blur-locked">${bTxt}</span>
+        </div>
+        <div class="mc-cta">${active ? '✓ Escenario activo' : 'Clic para simular →'}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="card">
+      <div class="ch">
+        <div class="ci ci-a">⚡</div>
+        <div>
+          <div class="ct">Matriz Predictiva de Contingencia</div>
+          <div class="cs">Clic en un nivel para proyectar la posición y el punto de recuperación al instante</div>
+        </div>
+      </div>
+      <div class="cb">
+        <div class="matrix-grid">${cards}</div>
+      </div>
+    </div>`;
+}
+
+function selectScenario(idx) {
+  const sc = matrixScenarios[idx];
+  if (!sc) return;
+  selectedScenarioIdx = idx;
+  g('iPNow').value = sc.price.toFixed(8);
+  run();
+  const target = g('statusSection');
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function renderInRangePanels(s) {
-  const msg = `<div class="empty"><span>✅</span>La posición sigue activa dentro del rango original. Las estrategias de Rebalanceo Cero y Reinyección Promediada se calculan automáticamente si el precio cae por debajo de P_LOW (${fmtP(s.plo0, s.tB)}).</div>`;
+  const msg = `<div class="empty"><span>✅</span>La posición sigue activa dentro del rango original. Las estrategias de Rebalanceo Cero y Reinyección Promediada se calculan automáticamente si el precio cae por debajo de P_LOW (${fmtP(s.plo0, s.tB)}) — probá un nivel de la Matriz Predictiva de arriba.</div>`;
   g('panelA').innerHTML = msg;
   g('panelB').innerHTML = msg;
 }
@@ -815,7 +972,7 @@ function renderExitedHighPanels(s) {
 function renderStrategyPanels(s) {
   const A = s.A, B = s.B;
 
-  // ── PANEL A ──
+  // ── PANEL A (free tier — always open) ──
   if (!A.valid) {
     g('panelA').innerHTML = '<div class="empty"><span>⚠️</span>No se puede calcular P_HIGH para este escenario. Verificá los valores.</div>';
   } else {
@@ -879,11 +1036,11 @@ function renderStrategyPanels(s) {
   `;
   }
 
-  // ── PANEL B ──
+  // ── PANEL B (gated — Estrategia B Avanzada) ──
   if (!B.valid) {
     g('panelB').innerHTML = '<div class="empty"><span>⚠️</span>No se puede calcular. Ajustá el capital a inyectar.</div>';
   } else {
-    g('panelB').innerHTML = `
+    const panelBHtml = `
     <div style="font-size:9px;color:var(--txt2);line-height:1.8;margin-bottom:10px;
       background:var(--bg2);border:1px solid var(--line);border-radius:7px;padding:10px 12px;">
       Inyectás <strong class="gold">${fB(B.injectAmt, s.tB)}</strong>, comprando <strong class="green">${fT(B.extraA, s.tA)}</strong> más al precio caído.
@@ -953,6 +1110,11 @@ function renderStrategyPanels(s) {
       </button>
     </div>
   `;
+    g('panelB').innerHTML = unlocked ? panelBHtml : lockedWrap(
+      panelBHtml,
+      'Estrategia B Avanzada',
+      'Reinyección promediada, rango optimizado y punto de recuperación exacto.'
+    );
   }
 }
 
@@ -967,7 +1129,7 @@ function renderCompare(s) {
   const diffWidth = A.width - B.width;
   const improved = diffPhi > 1e-9;
 
-  g('compareSection').innerHTML = `
+  const content = `
     <div class="verdict">
       <div>
         <div class="vm">
@@ -1021,70 +1183,12 @@ function renderCompare(s) {
       </div>
     </div>
   `;
-}
 
-// ── PROYECCIÓN PREDICTIVA ──
-// Steps are a percentage of P_LOW, not a fixed currency amount, so this
-// scales correctly whether the pair trades in the thousands (BTC/USDC) or
-// in fractions of a cent (a low-price altcoin).
-const PREDICT_STEP_PCT = 0.05; // 5% per tramo
-
-function makePredictSection(s) {
-  const scenarios = [];
-  for (let i = 1; i <= 4; i++) {
-    const price = s.plo0 * (1 - PREDICT_STEP_PCT * i);
-    if (price <= 0) break;
-    scenarios.push(makePredictScenario(s, price, i));
-  }
-  if (!scenarios.length) {
-    return `<div class="card"><div class="empty"><span>📉</span>No hay escenarios de caída disponibles para el rango actual.</div></div>`;
-  }
-  const rows = scenarios.map(row => `
-      <tr>
-        <td><strong>${row.label}</strong><div class="sub">${(PREDICT_STEP_PCT * row.i * 100).toFixed(0)}% bajo P_LOW</div></td>
-        <td><strong>${fmtP(row.A_phi, s.tB)}</strong><div class="sub">P_HIGH break-even (Estrategia A)</div></td>
-        <td><strong>${fB(row.B_inject, s.tB)}</strong><div class="sub">capital a inyectar (Estrategia B)</div></td>
-        <td><strong>${fmtP(row.B_plo, s.tB)} → ${fmtP(row.B_phi, s.tB)}</strong><div class="sub">mismo ancho % que el rango original</div></td>
-      </tr>`).join('');
-  return `
-    <div class="card predict-card">
-      <div class="predict-header">
-        <div>
-          <div class="predict-title">Proyección Predictiva Automatizada</div>
-          <div class="predict-sub">Escenarios de caída en tramos de ${(PREDICT_STEP_PCT * 100).toFixed(0)}% bajo P_LOW (${fmtP(s.plo0, s.tB)}) — proporcional al precio del par, no un monto fijo.</div>
-        </div>
-        <div class="predict-badge">Estrategias A / B</div>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="predict-table">
-          <thead>
-            <tr>
-              <th>Escenario</th>
-              <th>P_HIGH sin inyección</th>
-              <th>Inyección sugerida</th>
-              <th>Nuevos límites</th>
-            </tr>
-          </thead>
-          <tbody>${rows}
-          </tbody>
-        </table>
-      </div>
-    </div>`;
-}
-
-function makePredictScenario(s, price, i) {
-  const raw = amountsAt(s.L0, price, s.plo0, s.phi0);
-  const totalA = raw.a + (raw.b / price || 0);
-  const A_phi = solvePhiFullA(totalA, price, s.initB);
-  const widthRatio = (s.phi0 - s.plo0) / s.plo0;
-  const B_plo = price;
-  const B_phi = price * (1 + widthRatio);
-  const neededA = s.initB / (Math.sqrt(price) * Math.sqrt(B_phi));
-  const B_inject = Math.max(0, (neededA - totalA) * price);
-  return {
-    i, label: `${i}° tramo: ${fmtP(price, s.tB)}`,
-    A_phi: A_phi || 0, B_inject, B_plo, B_phi,
-  };
+  g('compareSection').innerHTML = unlocked ? content : lockedWrap(
+    content,
+    'Comparativa Completa A vs B',
+    'Mirá exactamente cuánto más rápido recuperás tu capital con la Estrategia B.'
+  );
 }
 
 function tr(label, a, b, d = '—') {
@@ -1094,6 +1198,35 @@ function tr(label, a, b, d = '—') {
     <td class="cv">${b}</td>
     <td class="cd">${d}</td>
   </tr>`;
+}
+
+// ── CTA GATING (lead-magnet funnel) ──
+// Edit these two URLs to point at your real community / support links.
+const CTA_CONFIG = {
+  communityUrl: 'https://chat.whatsapp.com/L9JFcNq618BCBSmwY66kDC',
+  supportUrl: 'https://wa.link/63fmr2',
+};
+
+function lockedWrap(innerHtml, title, subtitle) {
+  return `<div class="locked-wrap">
+    <div class="locked-blur">${innerHtml}</div>
+    <div class="locked-overlay">
+      <div class="locked-ic">🔒</div>
+      <div class="locked-ttl">${title}</div>
+      <div class="locked-sub">${subtitle}</div>
+      <button class="btn btn-gold" onclick="openGate()">Desbloquear ahora</button>
+    </div>
+  </div>`;
+}
+
+function openGate() {
+  const c = g('ctaCommunity'), sp = g('ctaSupport');
+  if (c) c.href = CTA_CONFIG.communityUrl;
+  if (sp) sp.href = CTA_CONFIG.supportUrl;
+  g('gateModal').classList.add('open');
+}
+function closeGate() {
+  g('gateModal').classList.remove('open');
 }
 
 // ── HISTORY ──
@@ -1145,6 +1278,7 @@ function renderHistory() {
 
 function loadSnapshot(i) {
   const h = history[i];
+  selectedScenarioIdx = null;
   g('iCapital').value = h.capital;
   g('iP0').value = h.pNow;
   g('iPLo').value = h.plo.toFixed(6);
@@ -1161,6 +1295,7 @@ function reset() {
   [['iTokA', 'ETH'], ['iTokB', 'USDC'], ['iCapital', 5000], ['iP0', 2500], ['iPLo', 2000], ['iPHi', 3000],
    ['iPNow', 1500], ['iInjectAmt', 1600], ['injectPct', 50]].forEach(([id, v]) => g(id).value = v);
   history = [];
+  selectedScenarioIdx = null;
   updateSlider(g('injectPct'));
   onInput(); run();
 }
