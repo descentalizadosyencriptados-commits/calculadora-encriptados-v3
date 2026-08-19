@@ -573,7 +573,10 @@ function computeStrategyAt(pHyp, plo0, phi0, L0, initB, injectAmt) {
   if (A_phi && A_phi > plo) {
     const L = calcLfullA(totalA0, plo, A_phi);
     const exitB = L * (sq(A_phi) - sq(plo));
-    A = { valid: true, totalA: totalA0, plo, phi: A_phi, L, exitB, width: (A_phi - plo) / plo * 100, pnl: exitB - initB };
+    // Amplitud medida desde P_HIGH hacia abajo (como el Price Range de
+    // TradingView), no desde P_LOW hacia arriba — evita porcentajes
+    // inflados cuando el rango es muy amplio.
+    A = { valid: true, totalA: totalA0, plo, phi: A_phi, L, exitB, width: (A_phi - plo) / A_phi * 100, pnl: exitB - initB };
   }
 
   const extraA = injectAmt > 0 && pHyp > 0 ? injectAmt / pHyp : 0;
@@ -586,7 +589,7 @@ function computeStrategyAt(pHyp, plo0, phi0, L0, initB, injectAmt) {
     const exitB = L * (sq(B_phi) - sq(plo));
     B = {
       valid: true, injectAmt, extraA, totalA: totalA1, plo, phi: B_phi, L, exitB,
-      width: (B_phi - plo) / plo * 100, pnlVsTarget: exitB - targetB, pnlNet: exitB - initB, targetB,
+      width: (B_phi - plo) / B_phi * 100, pnlVsTarget: exitB - targetB, pnlNet: exitB - initB, targetB,
     };
   }
 
@@ -776,19 +779,29 @@ function makeRangeViz(pNow, plo, phi, pinColor, tB) {
   const minP = Math.min(pNow, plo) * 0.85;
   const maxP = Math.max(pNow, phi) * 1.10;
   const span = maxP - minP;
-  const px = p => ((p - minP) / span * 100).toFixed(2) + '%';
+  const px = p => (p - minP) / span * 100;
   const inR = pNow >= plo && pNow <= phi;
   const fill = inR
     ? 'linear-gradient(90deg,rgba(0,240,128,.3),rgba(0,207,255,.3))'
     : 'linear-gradient(90deg,rgba(255,176,32,.25),rgba(0,207,255,.2))';
   const nowLbl = pNow <= plo ? 'actual (entrará)' : 'actual';
+
+  // Right after a Rebalanceo Cero, P_LOW sits only ENTRY_BUFFER away from
+  // the live price, so its tick and the P_NOW tick land almost on the same
+  // spot on the track — their text labels would overlap on one row. Detect
+  // that (in on-screen % terms, not just price terms) and push the P_NOW
+  // label to a second row instead.
+  const pxNow = px(pNow), pxLo = px(plo), pxHi = px(phi);
+  const stacked = Math.abs(pxNow - pxLo) < 12 || Math.abs(pxNow - pxHi) < 12;
+  const nowTickStyle = `left:${pxNow.toFixed(2)}%;color:${pinColor};font-weight:700;` + (stacked ? 'bottom:-29px;' : '');
+
   return `<div class="rviz">
-    <div class="rtrack">
-      <div class="rfill" style="left:${px(plo)};width:${((phi - plo) / span * 100).toFixed(2)}%;background:${fill};"></div>
-      <div class="rpin" style="left:${px(pNow)};background:${pinColor};color:${pinColor};"></div>
-      <span class="rtick" style="left:${px(plo)}">${fmtP(plo, tB)}</span>
-      <span class="rtick" style="left:${px(phi)}">${fmtP(phi, tB)}</span>
-      <span class="rtick" style="left:${px(pNow)};color:${pinColor};font-weight:700;">${nowLbl}</span>
+    <div class="rtrack"${stacked ? ' style="margin-bottom:33px;"' : ''}>
+      <div class="rfill" style="left:${pxLo.toFixed(2)}%;width:${(pxHi - pxLo).toFixed(2)}%;background:${fill};"></div>
+      <div class="rpin" style="left:${pxNow.toFixed(2)}%;background:${pinColor};color:${pinColor};"></div>
+      <span class="rtick" style="left:${pxLo.toFixed(2)}%">${fmtP(plo, tB)}</span>
+      <span class="rtick" style="left:${pxHi.toFixed(2)}%">${fmtP(phi, tB)}</span>
+      <span class="rtick" style="${nowTickStyle}">${nowLbl}</span>
     </div>
     <div class="rlabels">
       <span>P_LOW <strong class="amber">${fmtP(plo, tB)}</strong></span>
