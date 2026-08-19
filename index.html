@@ -49,6 +49,7 @@ body{background:var(--bg);color:var(--txt);font-family:var(--mono);min-height:10
 .pill-brand{color:var(--txt2);border-color:var(--line2);background:var(--bg2);letter-spacing:.5px;}
 .pill-brand strong{color:var(--gold);font-weight:700;}
 .pill-brand strong+strong{color:var(--cyan);}
+.pill-vip{color:var(--gold);border-color:var(--gold2);background:var(--goldbg);box-shadow:0 0 10px rgba(242,193,78,.25);font-weight:700;}
 .dot{width:4px;height:4px;border-radius:50%;background:currentColor;}
 
 /* ── LAYOUT ── */
@@ -230,6 +231,15 @@ select{cursor:pointer;}
 .modal-sub{font-size:10px;color:var(--txt2);line-height:1.6;margin-bottom:20px;}
 .modal-actions{display:flex;flex-direction:column;gap:9px;}
 .modal-actions .btn{justify-content:center;padding:11px 16px;font-size:11px;}
+.modal-divider{height:1px;background:var(--line);margin:18px 0 14px;}
+.modal-vip{text-align:left;}
+.modal-vip-lbl{font-size:9px;color:var(--txt2);margin-bottom:7px;}
+.modal-vip-row{display:flex;gap:7px;}
+.modal-vip-row input{flex:1;font-size:11px;padding:9px 10px;text-transform:uppercase;letter-spacing:1px;}
+.modal-vip-row .btn{flex-shrink:0;padding:9px 14px;font-size:10px;}
+.modal-vip-msg{font-size:9px;margin-top:7px;min-height:11px;}
+.modal-vip-msg.ok{color:var(--green);}
+.modal-vip-msg.err{color:var(--red);}
 
 /* ── VERDICT ── */
 .verdict{background:linear-gradient(135deg,rgba(0,240,128,.05),rgba(0,207,255,.05));
@@ -289,6 +299,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   <div class="pills">
     <span class="pill pill-c"><span class="dot"></span>CUALQUIER PAR</span>
     <span id="hdrPill" class="pill pill-r"><span class="dot"></span>—</span>
+    <span id="vipBadge" class="pill pill-vip" style="display:none;">👑 VIP ACTIVO</span>
     <span class="pill pill-brand">⚡ Powered by <strong>Encriptados</strong> &amp; <strong>Smarty Profit</strong></span>
   </div>
 </div>
@@ -452,7 +463,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       <div class="pdf-cta-ttl">📄 Exportá tu Plan de Contingencia en PDF</div>
       <div class="pdf-cta-sub">Llevate el análisis completo de ambas estrategias, listo para ejecutar.</div>
     </div>
-    <button class="btn btn-gold" onclick="openGate()">🔓 Exportar en PDF</button>
+    <button class="btn btn-gold" onclick="onExportPdfClick()">🔓 Exportar en PDF</button>
   </div>
 </div>
 
@@ -468,6 +479,16 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <div class="modal-actions">
       <a class="btn btn-gold" id="ctaCommunity" href="#" target="_blank" rel="noopener">🚀 Unirme a la Comunidad</a>
       <a class="btn btn-ghost" id="ctaSupport" href="#" target="_blank" rel="noopener">💬 Hablar con Soporte</a>
+    </div>
+    <div class="modal-divider"></div>
+    <div class="modal-vip">
+      <div class="modal-vip-lbl">¿Ya tenés tu clave VIP? Ingresála acá:</div>
+      <div class="modal-vip-row">
+        <input type="text" id="vipCodeInput" placeholder="Clave VIP" autocomplete="off"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();tryUnlockVip();}">
+        <button class="btn btn-gold" onclick="tryUnlockVip()">Desbloquear</button>
+      </div>
+      <div id="vipCodeMsg" class="modal-vip-msg"></div>
     </div>
   </div>
 </div>
@@ -889,6 +910,15 @@ function makeMatrixSection(s) {
     const active = sc.idx === selectedScenarioIdx ? ' active' : '';
     const aTxt = sc.r.A.valid ? fmtP(sc.r.A.phi, s.tB) : '—';
     const bTxt = sc.r.B.valid ? fmtP(sc.r.B.phi, s.tB) : '—';
+    const bRow = unlocked
+      ? `<div class="mc-row">
+          <span class="mc-lbl">⚡ P_HIGH · Reinyección</span>
+          <span class="mc-val green">${bTxt}</span>
+        </div>`
+      : `<div class="mc-row mc-locked" onclick="event.stopPropagation();openGate()">
+          <span class="mc-lbl">⚡ P_HIGH · Reinyección <span class="lock-ic">🔒</span></span>
+          <span class="mc-val blur-locked">${bTxt}</span>
+        </div>`;
     return `
       <div class="matrix-card${active}" onclick="selectScenario(${sc.idx})">
         <div class="mc-lvl">-${(sc.pct * 100).toFixed(0)}%</div>
@@ -898,10 +928,7 @@ function makeMatrixSection(s) {
           <span class="mc-lbl">🎯 P_HIGH · Rebalanceo Cero</span>
           <span class="mc-val amber">${aTxt}</span>
         </div>
-        <div class="mc-row mc-locked" onclick="event.stopPropagation();openGate()">
-          <span class="mc-lbl">⚡ P_HIGH · Reinyección <span class="lock-ic">🔒</span></span>
-          <span class="mc-val blur-locked">${bTxt}</span>
-        </div>
+        ${bRow}
         <div class="mc-cta">${active ? '✓ Escenario activo' : 'Clic para simular →'}</div>
       </div>`;
   }).join('');
@@ -1220,13 +1247,102 @@ function lockedWrap(innerHtml, title, subtitle) {
 }
 
 function openGate() {
+  if (unlocked) return; // VIP ya tiene todo desbloqueado — nunca interrumpir con el modal
   const c = g('ctaCommunity'), sp = g('ctaSupport');
   if (c) c.href = CTA_CONFIG.communityUrl;
   if (sp) sp.href = CTA_CONFIG.supportUrl;
   g('gateModal').classList.add('open');
+  const input = g('vipCodeInput'), msg = g('vipCodeMsg');
+  if (input) input.value = '';
+  if (msg) { msg.textContent = ''; msg.className = 'modal-vip-msg'; }
 }
 function closeGate() {
   g('gateModal').classList.remove('open');
+}
+
+// ── VIP ACCESS — lightweight, persistent unlock via localStorage ──
+// Three ways in: a magic-link URL param, a code typed into the gate
+// modal, or a hidden dev shortcut. All three converge on the same
+// localStorage flag, so once granted, access survives reloads and
+// applies everywhere the gate would otherwise show (Estrategia B,
+// the Matriz Predictiva's Reinyección row, and PDF export).
+const VIP_STORAGE_KEY = 'user_vip';
+const VIP_KEYS = ['ENCRIPTADOS', 'SMARTY2026', 'VIP360']; // claves válidas — editá esta lista
+
+function normalizeVipKey(k) { return String(k || '').trim().toUpperCase(); }
+function isValidVipKey(k) { return VIP_KEYS.includes(normalizeVipKey(k)); }
+
+function updateVipBadge() {
+  const el = g('vipBadge');
+  if (el) el.style.display = unlocked ? 'inline-flex' : 'none';
+}
+
+// Grants VIP for the rest of this browser (persists in localStorage),
+// re-renders to lift every blur/lock immediately, and — unless silent —
+// closes the modal it was opened from.
+function activateVip(opts) {
+  opts = opts || {};
+  localStorage.setItem(VIP_STORAGE_KEY, 'true');
+  unlocked = true;
+  updateVipBadge();
+  if (!opts.silent) closeGate();
+  if (S.initB) renderAll();
+}
+
+function tryUnlockVip() {
+  const input = g('vipCodeInput');
+  const msg = g('vipCodeMsg');
+  const val = input ? input.value : '';
+  if (isValidVipKey(val)) {
+    if (msg) { msg.textContent = '✓ Clave válida — ¡bienvenido!'; msg.className = 'modal-vip-msg ok'; }
+    activateVip();
+  } else {
+    if (msg) { msg.textContent = '✕ Clave inválida. Probá de nuevo.'; msg.className = 'modal-vip-msg err'; }
+    if (input) { input.value = ''; input.focus(); }
+  }
+}
+
+// Magic link: ?vip=true, ?admin=true (dev/test bypass), or ?pass=<clave>.
+// On a match, persists the flag and strips the param from the address
+// bar so the URL stays clean and shareable-looking. Falls back to
+// whatever localStorage already has (returning visitors stay unlocked).
+function checkVipFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const hasVipParam = params.has('vip') || params.has('admin') || params.has('pass');
+  const granted = params.get('vip') === 'true' ||
+    params.get('admin') === 'true' ||
+    isValidVipKey(params.get('pass'));
+
+  if (granted) {
+    localStorage.setItem(VIP_STORAGE_KEY, 'true');
+    unlocked = true;
+  } else if (localStorage.getItem(VIP_STORAGE_KEY) === 'true') {
+    unlocked = true;
+  }
+
+  if (hasVipParam) {
+    params.delete('vip'); params.delete('admin'); params.delete('pass');
+    const qs = params.toString();
+    const cleanUrl = window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
+  updateVipBadge();
+}
+
+// Hidden dev/admin shortcut: Ctrl+Shift+V activates VIP instantly for
+// quick local testing, no URL editing needed.
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && (e.key === 'V' || e.key === 'v')) {
+    e.preventDefault();
+    activateVip({ silent: true });
+  }
+});
+
+// PDF export: VIP gets a real browser print-to-PDF, everyone else hits
+// the same gate as Estrategia B.
+function onExportPdfClick() {
+  if (unlocked) { window.print(); return; }
+  openGate();
 }
 
 // ── HISTORY ──
@@ -1301,6 +1417,7 @@ function reset() {
 }
 
 // init
+checkVipFromUrl();
 updateSlider(g('injectPct'));
 onInput();
 run();
